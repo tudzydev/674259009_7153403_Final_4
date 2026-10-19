@@ -4,6 +4,8 @@ Install dependencies with `bun install`. Set `DATABASE_URL` to a PostgreSQL conn
 
 For environment files, use `bun run dev:local` with `.env.local` or `bun run dev:neon` with `.env.neon`. Set `DATABASE_PROVIDER=neon` for Neon.
 
+CORS is enabled before the routes and JSON parser, including automatic `OPTIONS` preflight handling. The backend reads `FRONEND_URL` (using this exact environment variable spelling), for example `FRONEND_URL=https://674259009-7153403-final-d.vercel.app`. Multiple frontend origins can be comma-separated: `FRONEND_URL=http://localhost:3000,https://674259009-7153403-final-d.vercel.app`. Spaces and trailing slashes are trimmed. If unset or empty, the defaults allow `http://localhost` and `http://127.0.0.1` on ports 3000, 3001, and 3100, plus `https://674259009-7153403-final-d.vercel.app`. Restart or redeploy the backend after changing the variable. For Docker, pass `FRONEND_URL` into the backend container environment. Requests from other origins receive no `Access-Control-Allow-Origin` header. Server-to-server requests and the existing Next.js proxy continue to work.
+
 Startup connects to PostgreSQL and creates missing model tables with `sequelize.sync()`; it does not alter existing tables.
 
 Startup also saves 12 sample events in PostgreSQL (4 each in อบรม, สัมมนา, and จิตอาสา; each category has 2 published and 2 drafts). These are persisted records served by the API and editable through normal CRUD operations. To seed without starting the server, run `bun run db:seed:local` or `bun run db:seed:neon`.
