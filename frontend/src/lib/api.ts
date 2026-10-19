@@ -2,8 +2,6 @@ import type { Event, EventInput, EventFilters } from "@/types/event";
 import { filterEvents } from "@/lib/event-utils";
 import { isEvent } from "@/lib/event-validation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
 type ApiResponse<T> = {
   data: T;
 };
@@ -30,7 +28,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL.replace(/\/+$/, "")}${path}`, {
+    // Use the same origin; Next.js forwards these requests to the backend.
+    response = await fetch(path, {
       ...options,
       headers,
       cache: "no-store",

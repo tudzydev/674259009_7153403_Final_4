@@ -1,27 +1,66 @@
 const eventProperties = {
-  title: { type: "string", minLength: 1, maxLength: 150, example: "กิจกรรมอบรม" },
-  organizer: { type: "string", minLength: 1, maxLength: 100, example: "ผู้จัดกิจกรรม" },
-  category: { type: "string", maxLength: 50, enum: ["อบรม", "สัมมนา", "จิตอาสา"] },
-  eventDate: { type: "string", format: "date", pattern: "^\\d{4}-\\d{2}-\\d{2}$", example: "2026-12-01" },
-  description: { type: "string", minLength: 1, maxLength: 2000, example: "รายละเอียดกิจกรรม" },
+  title: {
+    type: "string",
+    minLength: 1,
+    maxLength: 150,
+    example: "กิจกรรมอบรม",
+  },
+  organizer: {
+    type: "string",
+    minLength: 1,
+    maxLength: 100,
+    example: "ผู้จัดกิจกรรม",
+  },
+  category: {
+    type: "string",
+    maxLength: 50,
+    enum: ["อบรม", "สัมมนา", "จิตอาสา"],
+  },
+  eventDate: {
+    type: "string",
+    format: "date",
+    pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+    example: "2026-12-01",
+  },
+  description: {
+    type: "string",
+    minLength: 1,
+    maxLength: 2000,
+    example: "รายละเอียดกิจกรรม",
+  },
   status: {
     type: "boolean",
-    description: "Optional. Defaults to true on creation; retains the current value when omitted on update.",
+    description:
+      "Optional. Defaults to true on creation; retains the current value when omitted on update.",
     example: true,
   },
 };
-const requiredFields = ["title", "organizer", "category", "eventDate", "description"];
+const requiredFields = [
+  "title",
+  "organizer",
+  "category",
+  "eventDate",
+  "description",
+];
 const errorResponse = (description: string) => ({
   description,
-  content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+  content: {
+    "application/json": { schema: { $ref: "#/components/schemas/Error" } },
+  },
 });
 const eventResponse = (description: string) => ({
   description,
-  content: { "application/json": { schema: { $ref: "#/components/schemas/EventResponse" } } },
+  content: {
+    "application/json": {
+      schema: { $ref: "#/components/schemas/EventResponse" },
+    },
+  },
 });
 const requestBody = {
   required: true,
-  content: { "application/json": { schema: { $ref: "#/components/schemas/EventInput" } } },
+  content: {
+    "application/json": { schema: { $ref: "#/components/schemas/EventInput" } },
+  },
 };
 const idParameter = {
   name: "id",
@@ -33,28 +72,46 @@ const idParameter = {
 
 export const swaggerDocument = {
   openapi: "3.0.3",
-  info: { title: "Event API", version: "1.0.0", description: "Create, read, update, and delete events." },
+  info: {
+    title: "Event API",
+    version: "1.0.0",
+    description: "Create, read, update, and delete events.",
+  },
   servers: [{ url: "/", description: "Current API server" }],
   tags: [{ name: "Events" }],
   paths: {
     "/api/events": {
       get: {
-        tags: ["Events"], operationId: "getEvents", summary: "List events",
+        tags: ["Events"],
+        operationId: "getEvents",
+        summary: "List events",
         description: "Ordered by eventDate ascending, then id ascending.",
         responses: {
           "200": {
             description: "Event list",
-            content: { "application/json": { schema: {
-              type: "object", required: ["data"], properties: {
-                data: { type: "array", items: { $ref: "#/components/schemas/Event" } },
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["data"],
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Event" },
+                    },
+                  },
+                },
               },
-            } } },
+            },
           },
           "500": errorResponse("Internal server error"),
         },
       },
       post: {
-        tags: ["Events"], operationId: "createEvent", summary: "Create an event", requestBody,
+        tags: ["Events"],
+        operationId: "createEvent",
+        summary: "Create an event",
+        requestBody,
         responses: {
           "201": eventResponse("Event created"),
           "400": errorResponse("Invalid event input or malformed JSON"),
@@ -65,7 +122,9 @@ export const swaggerDocument = {
     "/api/events/{id}": {
       parameters: [idParameter],
       get: {
-        tags: ["Events"], operationId: "getEvent", summary: "Get an event",
+        tags: ["Events"],
+        operationId: "getEvent",
+        summary: "Get an event",
         responses: {
           "200": eventResponse("Event found"),
           "400": errorResponse("Invalid event ID"),
@@ -74,8 +133,12 @@ export const swaggerDocument = {
         },
       },
       put: {
-        tags: ["Events"], operationId: "updateEvent", summary: "Update an event",
-        description: "Send all required fields. Omitting status preserves its current value.", requestBody,
+        tags: ["Events"],
+        operationId: "updateEvent",
+        summary: "Update an event",
+        description:
+          "Send all required fields. Omitting status preserves its current value.",
+        requestBody,
         responses: {
           "200": eventResponse("Event updated"),
           "400": errorResponse("Invalid event ID, input, or malformed JSON"),
@@ -84,7 +147,9 @@ export const swaggerDocument = {
         },
       },
       delete: {
-        tags: ["Events"], operationId: "deleteEvent", summary: "Delete an event",
+        tags: ["Events"],
+        operationId: "deleteEvent",
+        summary: "Delete an event",
         responses: {
           "204": { description: "Event deleted; no response body" },
           "400": errorResponse("Invalid event ID"),
@@ -97,26 +162,39 @@ export const swaggerDocument = {
   components: {
     schemas: {
       EventInput: {
-        type: "object", required: requiredFields,
-        description: "Text fields must contain non-whitespace characters. eventDate must be a real calendar date in YYYY-MM-DD format. Extra fields are ignored.",
+        type: "object",
+        required: requiredFields,
+        description:
+          "Text fields must contain non-whitespace characters. eventDate must be a real calendar date in YYYY-MM-DD format. Extra fields are ignored.",
         properties: eventProperties,
       },
       Event: {
-        type: "object", required: ["id", ...requiredFields, "status", "createdAt", "updatedAt"],
+        type: "object",
+        required: ["id", ...requiredFields, "status", "createdAt", "updatedAt"],
         properties: {
-          id: { type: "integer", format: "int32", minimum: 1, readOnly: true, example: 1 },
+          id: {
+            type: "integer",
+            format: "int32",
+            minimum: 1,
+            readOnly: true,
+            example: 1,
+          },
           ...eventProperties,
           createdAt: { type: "string", format: "date-time", readOnly: true },
           updatedAt: { type: "string", format: "date-time", readOnly: true },
         },
       },
       EventResponse: {
-        type: "object", required: ["data"],
+        type: "object",
+        required: ["data"],
         properties: { data: { $ref: "#/components/schemas/Event" } },
       },
       Error: {
-        type: "object", required: ["error"],
-        properties: { error: { type: "string", example: "Invalid event input" } },
+        type: "object",
+        required: ["error"],
+        properties: {
+          error: { type: "string", example: "Invalid event input" },
+        },
       },
     },
   },

@@ -21,7 +21,12 @@ const handleError: ErrorRequestHandler = (error: unknown, _req, res, _next) => {
     res.status(400).json({ error: "Invalid event input" });
     return;
   }
-  if (typeof error === "object" && error !== null && "status" in error && error.status === 400) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 400
+  ) {
     res.status(400).json({ error: "Invalid JSON request" });
     return;
   }
