@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   ArrowRight,
   CalendarDays,
-  CalendarRange,
   CheckCircle2,
   ChevronRight,
   CircleAlert,
@@ -72,18 +72,15 @@ function Navigation({
 }) {
   return (
     <>
-      <div className="flex items-center gap-3 px-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
-          <CalendarRange className="size-5" />
-        </div>
-        <div>
-          <p className="text-sm font-bold tracking-tight text-slate-900">
-            Event Management
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-400">
-            ระบบจัดการกิจกรรมมหาวิทยาลัย
-          </p>
-        </div>
+      <div className="px-3">
+        <Image
+          src="/logo.png"
+          alt="Event Management ระบบจัดการกิจกรรม"
+          width={1254}
+          height={1254}
+          sizes="240px"
+          className="h-auto w-full"
+        />
       </div>
       <p className="mt-12 mb-3 px-4 text-[10px] font-semibold tracking-[.15em] text-slate-400">
         เมนูหลัก
