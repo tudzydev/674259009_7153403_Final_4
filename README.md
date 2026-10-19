@@ -8,7 +8,7 @@
 | งาน | Final Examination — การสอบปลายภาค |
 | ภาคเรียน / ปีการศึกษา | **1/2569** |
 | ชุดโจทย์ | **D — กิจกรรม** |
-| Repository | `674259009_7153403_Final_4` |
+| Repository | `674259009_7153403_Final_D` |
 | รหัสนักศึกษา | `674259009` |
 | ผู้จัดทำ |นรงศ์ศักดิ์ ภูมิประเสริฐ |
 
@@ -16,7 +16,7 @@
 
 > **การใช้ Frontend:** โครงการใช้ **Next.js App Router + React** แทน React + Vite โดยผู้จัดทำยืนยันว่าได้สอบถามอาจารย์และได้รับอนุญาตแล้ว จึงใช้ Next.js ต่อไปได้โดยไม่ต้องย้าย framework
 
-Backend ปรับให้ DELETE ตอบ **200** และรองรับ search/category filtering ผ่าน query parameters แล้วใน working tree; Production ที่ตรวจยังเป็นเวอร์ชันเดิม
+Backend รองรับ search/category filtering และกำหนด DELETE ให้ตอบ **200** แล้ว ตรวจ Production พบ OpenAPI ของเวอร์ชันใหม่และทดสอบ GET search/category ผ่าน ส่วน POST/PUT/DELETE บน Production ยังไม่ทดสอบ
 
 ## 2. ภาพรวมโครงงาน
 
@@ -25,6 +25,8 @@ Backend ปรับให้ DELETE ตอบ **200** และรองรั�
 หน้าจอมีภาพรวมจำนวนกิจกรรม กิจกรรมที่กำลังจะมาถึง การค้นหาจากชื่อกิจกรรมหรือผู้จัด การกรองหมวดหมู่และสถานะ และการเรียงตามวันที่หรือชื่อ การค้นหาชื่อ/ผู้จัดและกรองหมวดหมู่ทำผ่าน Backend แล้ว Frontend ยังตรวจกรองซ้ำเพื่อรองรับ API รุ่นเดิม ส่วนการกรองสถานะทำที่ Frontend รายละเอียดและฟอร์มเปิดเป็น dialog บนหน้า `/` ไม่ได้มี URL แยกสำหรับแต่ละหน้า
 
 ### การใช้งานระบบออนไลน์ (Live Demo)
+
+**สถานะปัจจุบัน:** ผู้จัดทำยืนยันว่า deploy โค้ดล่าสุดครบแล้วทั้ง Frontend บน Vercel และ Backend บน Render โดยใช้ Neon PostgreSQL เป็นฐานข้อมูล Production การยืนยัน deployment นี้แยกจากผลทดสอบ CRUD และ persistence ที่ระบุในหัวข้อ 13
 
 | บริการ | ลิงก์ |
 | --- | --- |
@@ -36,7 +38,7 @@ Backend ปรับให้ DELETE ตอบ **200** และรองรั�
 
 ตรวจด้วย HTTP GET เมื่อวันที่ 19 ตุลาคม 2569 แล้ว Frontend, Events API, Swagger, OpenAPI JSON และ `/api/events` ผ่าน Vercel proxy ตอบ **200** ทั้งหมด การตรวจล่าสุดเวลา 09:05 UTC พบ API มี **13 รายการ**: อบรม 6, สัมมนา 3, จิตอาสา 4 รวมเผยแพร่ 7 และฉบับร่าง 6 โดย Render และ Vercel proxy คืน JSON ตรงกัน การตรวจครั้งก่อนหน้าพบ 15 รายการ จึงบันทึกจำนวนตามเวลาตรวจและไม่ถือว่าจำนวนต้องคงที่ รอบนี้ไม่ได้ส่ง mutation ไป Production
 
-**Production ยังไม่ได้ deploy การแก้ไขรอบนี้:** OpenAPI ออนไลน์ยังระบุ DELETE 204 และไม่มี search/category query parameters จึงไม่ถือว่าคุณสมบัติใหม่ทำงานบน Production แล้ว ยังไม่ได้ทดสอบ POST/PUT/DELETE บน Production การเปิด Backend `/` ไม่ใช่ health check เพราะไม่มี route ดังกล่าว
+**ตรวจ Backend หลัง deploy แล้ว:** Events API และ OpenAPI JSON ตอบ 200; specification ออนไลน์ระบุ DELETE 200 และ search/category query parameters แล้ว GET category สัมมนาคืนเฉพาะรายการสัมมนา และ search ที่ไม่มีข้อมูลคืนรายการว่าง Log จาก Render ที่ผู้จัดทำส่งมายืนยันการเชื่อม Neon และสถานะ service live ยังไม่ได้ทดสอบ POST/PUT/DELETE บน Production การเปิด Backend `/` ไม่ใช่ health check เพราะไม่มี route ดังกล่าว
 
 สถาปัตยกรรม Production ตามปลายทางที่ให้มาและ configuration ในโค้ด:
 
@@ -44,10 +46,10 @@ Backend ปรับให้ DELETE ตอบ **200** และรองรั�
 flowchart LR
     U[Browser] --> V[Vercel: Next.js Frontend]
     V -->|rewrite /api/events/*| R[Render: Express API บน Bun]
-    R -->|Sequelize| D[(PostgreSQL)]
+    R -->|Sequelize| D[(Neon PostgreSQL)]
 ```
 
-Browser เรียก `/api/events` บน origin ของ Frontend จากนั้น Next.js ส่งต่อไปยัง Render ตาม `BACKEND_API_URL` หรือ fallback `NEXT_PUBLIC_API_URL` ฐานข้อมูลรองรับ PostgreSQL แบบ local และ Neon แต่ **ยังไม่มีหลักฐานยืนยัน provider ที่ใช้ใน Production**
+Browser เรียก `/api/events` บน origin ของ Frontend จากนั้น Next.js ส่งต่อไปยัง Render ตาม `BACKEND_API_URL` หรือ fallback `NEXT_PUBLIC_API_URL` Production ใช้ **Neon PostgreSQL** ตาม log `Database connected (neon)` ที่ผู้จัดทำส่งมา ส่วนในเครื่องรองรับ PostgreSQL local ผ่าน Docker
 
 ## 3. เทคโนโลยีที่ใช้
 
@@ -70,7 +72,7 @@ Browser เรียก `/api/events` บน origin ของ Frontend จาก
 .
 ├── README.md
 ├── docker-compose.yml
-├── render.yaml                       # template สำหรับ Render ยังไม่ได้ apply
+├── render.yaml                       # template สำหรับ Docker deployment บน Render
 ├── backend/
 │   ├── .env.example
 │   ├── .gitignore
@@ -367,7 +369,7 @@ GET list ตอบ `{"data": [ ... ]}` โดยแต่ละสมาชิ�
 
 ตัวอย่าง `GET /api/events?search=Excel&category=อบรม` ค้นหาและกรองที่ server โดย `%`, `_` และ backslash ในคำค้นเป็นอักขระปกติ ไม่ใช่ SQL wildcard ค่าว่างไม่จำกัดผลลัพธ์; query ที่ส่งหลายค่าใน key เดียว หรือหมวดหมู่ที่ไม่รองรับ ตอบ 400 `Invalid event filters`
 
-`eventApi.getAll()` ยังกรองผลซ้ำใน Frontend เพื่อรองรับ Production รุ่นเก่าที่ยังไม่กรองฝั่ง server การกรองสถานะและเรียงลำดับเพิ่มเติมทำใน dashboard ไม่มี server-side pagination
+`eventApi.getAll()` ยังกรองผลซ้ำใน Frontend เพื่อรองรับ API รุ่นเก่าที่ยังไม่กรองฝั่ง server; Production Backend ที่ตรวจล่าสุดรองรับการกรองแล้ว การกรองสถานะและเรียงลำดับเพิ่มเติมทำใน dashboard ไม่มี server-side pagination
 
 ### Error responses
 
@@ -446,7 +448,7 @@ Markdown image references ต่อไปนี้เป็น **placeholder ร
 | Output Directory | ใช้ค่าเริ่มต้นของ Next.js preset; build อยู่ `.next` และมี standalone output ตาม `next.config.ts` ไม่ใช่ `dist` |
 | Environment | `BACKEND_API_URL=https://event-backend-5m5f.onrender.com` หรือ `NEXT_PUBLIC_API_URL` เป็น fallback |
 
-มี [frontend/vercel.json](frontend/vercel.json) กำหนด framework/install/build commands แล้ว ส่วน Root Directory `frontend` และ API environment ต้องตั้งใน dashboard และยังไม่ได้ apply ไฟล์ใหม่นี้บน Production เปลี่ยน API destination แล้วต้อง redeploy รายละเอียดรูปแบบไฟล์อ้างอิง [Vercel configuration](https://vercel.com/docs/project-configuration/vercel-json) Production ไม่ใช้ `bun run start` เป็น Vercel start command ส่วนการรัน production build เองใช้ `bun run build` แล้ว `bun run start` ภายใน `frontend/`
+มี [frontend/vercel.json](frontend/vercel.json) กำหนด framework/install/build commands แล้ว ผู้จัดทำยืนยันว่า Frontend เวอร์ชันล่าสุดขึ้น Production แล้ว ส่วน Root Directory `frontend` และ API environment จัดการใน dashboard ซึ่งยังไม่ได้ตรวจค่าผ่านบัญชี hosting โดยตรง เปลี่ยน API destination แล้วต้อง redeploy รายละเอียดรูปแบบไฟล์อ้างอิง [Vercel configuration](https://vercel.com/docs/project-configuration/vercel-json) Production ไม่ใช้ `bun run start` เป็น Vercel start command ส่วนการรัน production build เองใช้ `bun run build` แล้ว `bun run start` ภายใน `frontend/`
 
 ### Backend — Render
 
@@ -463,7 +465,22 @@ Markdown image references ต่อไปนี้เป็น **placeholder ร
 | CORS environment | `FRONEND_URL=https://674259009-7153403-final-d.vercel.app` |
 | API Base URL | [Events API](https://event-backend-5m5f.onrender.com/api/events) |
 
-มี [render.yaml](render.yaml) เป็น Docker deployment template แล้ว แต่ยังไม่ได้ apply และยังไม่ยืนยัน runtime/คำสั่งใน Render Dashboard ชื่อ service `event-backend` ใน template ต้องเทียบกับ service เดิมก่อนนำไปเชื่อม Blueprint ตั้ง `DATABASE_PROVIDER` และ `DATABASE_URL` ผ่าน dashboard โดย `sync: false` ไม่เก็บ secret ใน repository ค่า Dockerfile/context อ้างอิงจาก `rootDir: backend` ตาม [Render monorepo documentation](https://render.com/docs/monorepo-support) หากใช้ Docker runtime ไม่ต้องนำ Build/Start Command ของ native runtime ไปตั้งทับ Dockerfile ทุกครั้งที่เริ่ม server จะ authenticate, sync และตรวจ marker ก่อน seed ไม่พบ health endpoint แยก; Compose ใช้ GET `/api/events` ตรวจ readiness
+มี [render.yaml](render.yaml) เป็น Docker deployment template โดยผู้จัดทำยืนยันว่า Backend เวอร์ชันล่าสุดขึ้น Production แล้ว แต่ยังไม่ได้ตรวจว่า service เดิมเชื่อม Blueprint นี้หรือกำหนดค่าผ่าน Render Dashboard ชื่อ service `event-backend` ใน template ต้องเทียบกับ service เดิมก่อนนำไปเชื่อม Blueprint ตั้ง `DATABASE_PROVIDER` และ `DATABASE_URL` ผ่าน dashboard โดย `sync: false` ไม่เก็บ secret ใน repository ค่า Dockerfile/context อ้างอิงจาก `rootDir: backend` ตาม [Render monorepo documentation](https://render.com/docs/monorepo-support) หากใช้ Docker runtime ไม่ต้องนำ Build/Start Command ของ native runtime ไปตั้งทับ Dockerfile ทุกครั้งที่เริ่ม server จะ authenticate, sync และตรวจ marker ก่อน seed ไม่พบ health endpoint แยก; Compose ใช้ GET `/api/events` ตรวจ readiness
+
+### หลักฐาน Render startup จากผู้จัดทำ
+
+```text
+$ bun src/server.ts
+Database connected (neon)
+Initial events seeded: 0
+Server listening on port 4000
+error: script "start" was terminated by signal SIGTERM (Polite quit request)
+==> Your service is live
+```
+
+Log ยืนยันว่าเชื่อม Neon สำเร็จและเปิด listener ที่ port 4000 ส่วน `Initial events seeded: 0` หมายถึงรอบ startup นี้ไม่ได้เพิ่ม seed ใหม่ ตามโค้ดเกิดเมื่อพบ marker `initial-events-v1` แล้ว ไม่ได้หมายความว่าฐานข้อมูลไม่มีรายการกิจกรรม และไม่ใช่หลักฐานว่าข้อมูลทุก record คงอยู่ครบหลัง redeploy
+
+`SIGTERM` เป็นสัญญาณที่ Render ใช้หยุด instance เดิมระหว่าง deploy ได้ ตาม [Render deployment lifecycle](https://render.com/docs/deploys) เมื่อประกอบกับข้อความ service live และ GET ที่ตอบ 200 จึงสอดคล้องกับการเปลี่ยน instance มากกว่าข้อสรุปว่า service ปัจจุบันล่ม แต่ log ชุดนี้เพียงอย่างเดียวไม่ระบุว่า process ที่ถูกหยุดเป็น instance ใด
 
 ### Database และหลักฐาน persistence
 
@@ -472,8 +489,8 @@ Markdown image references ต่อไปนี้เป็น **placeholder ร
 | เก็บข้อมูลจริง | Controller เรียก `Event.findAll/findByPk/create/update/destroy` ผ่าน Sequelize PostgreSQL | CRUD ผ่านบน PostgreSQL local; ยังไม่ทดสอบ mutation บน Production |
 | Local persistence | `pgdata:/var/lib/postgresql/data` ใน Compose | ตรวจ configuration แล้ว; ทดสอบ restart ของ Backend process แล้ว แต่ยังไม่ restart PostgreSQL container |
 | Seed persistence | `seed_runs` marker และ events commit ใน transaction เดียวกัน พร้อม advisory lock | integration tests ยืนยัน 12 seed records และไม่เพิ่มซ้ำ; Production ตรวจล่าสุดมี 13 รายการ |
-| Neon support | `DATABASE_PROVIDER=neon` เลือก secure WebSocket driver | ไม่ยืนยันว่า Production ใช้ Neon |
-| Production provider | **TODO:** ยืนยันชื่อ provider และการตั้งค่า backup/retention จาก dashboard โดยไม่เปิดเผย connection string | GET ผ่าน Render และ Vercel proxy ยืนยันการอ่าน แต่ยังไม่พิสูจน์ provider หรือ persistence หลัง redeploy |
+| Neon Production | Log ที่ผู้จัดทำส่งมา: `Database connected (neon)` และ `Server listening on port 4000` | ยืนยัน provider จาก log; ยังไม่ตรวจ dashboard หรือ credentials |
+| Production provider | **Neon PostgreSQL** ตาม startup log ที่ผู้จัดทำส่งมา | ยังต้องยืนยัน backup/retention จาก dashboard และ persistence ของรายการเฉพาะหลัง redeploy |
 
 ฐานข้อมูล Production ต้องอยู่ใน PostgreSQL service ที่เก็บข้อมูลถาวรแยกจาก filesystem ของ Backend ใช้ `DATABASE_URL` ใน secrets/environment ของ Render และไม่บันทึก credentials ลง README การยืนยัน persistence ต้องบันทึกข้อมูลทดสอบแล้วตรวจซ้ำหลัง refresh และ restart/redeploy ตามหัวข้อถัดไป
 
@@ -492,6 +509,7 @@ Markdown image references ต่อไปนี้เป็น **placeholder ร
 | Frontend production build | **ผ่าน `bun run build`** | TypeScript และ static pages ผ่าน; แยก Turbopack cache ที่เก็บข้อผิดพลาดจาก sandbox แล้ว build ใหม่สำเร็จ |
 | Production read checks | HTTP **200** | Frontend, Render GET events, Vercel GET events proxy, Swagger และ OpenAPI JSON |
 | Production CORS preflight | HTTP **204**, allowed origin ตรง Vercel URL | OPTIONS สำหรับ POST พร้อม Content-Type; ไม่ได้ส่ง POST จริง |
+| Backend หลัง deploy | Events API/OpenAPI ตอบ **200**; GET search/category ผ่าน | category สัมมนาคืนเฉพาะหมวดที่เลือก; search ไม่ตรงข้อมูลคืน array ว่าง; DELETE 200 ตรวจจาก specification เท่านั้น |
 
 Backend integration tests ใช้ schema ชั่วคราวชื่อ `exam_test_<random>` สร้างและลบเฉพาะ schema ของตนเอง รับเฉพาะ PostgreSQL host แบบ localhost/loopback และ **ไม่ใช้ DATABASE_URL จาก .env โดยปริยาย** จึงไม่เขียนข้อมูล Production
 
@@ -538,10 +556,10 @@ bun run build
 | รายการ | สิ่งที่ยังขาด |
 | --- | --- |
 | Browser end-to-end | กดเพิ่ม/แก้ไข/ยืนยันลบ/ยกเลิก, ตัวกรองร่วมกัน และตรวจ spinner/retry/toast จริง; รอบนี้ไม่มีเครื่องมือ browser control ให้ใช้งาน |
-| Production deployment build | Local production build ผ่านแล้ว; ยังต้องตรวจ build log บน hosting หลัง deploy เวอร์ชันใหม่ |
-| Deployment เวอร์ชันใหม่ | ยังไม่ได้ deploy working tree นี้; Production OpenAPI ยังมี DELETE 204 และไม่มี query parameters |
+| Production build log | Local production build ผ่านแล้ว และผู้จัดทำยืนยันว่า deploy ล่าสุดครบทั้งสองบริการ; ยังไม่ได้อ่าน build log ของ Vercel โดยตรง |
+| Deployment เวอร์ชันใหม่ | **ดำเนินการแล้ว:** ผู้จัดทำยืนยันว่า Frontend และ Backend เวอร์ชันล่าสุดอยู่บน Production; Backend OpenAPI และ GET filters ตรวจแล้ว |
 | Production CRUD | ยังไม่ส่ง POST/PUT/DELETE บน Production; ต้องใช้ข้อมูลทดสอบที่แยกชัดเจน |
-| Production persistence | ยังไม่ทดสอบหลัง restart/redeploy หรือยืนยัน provider/backup จาก dashboard |
+| Production persistence | ยืนยัน Neon จาก startup log แล้ว แต่ยังไม่ทดสอบข้อมูลเฉพาะก่อน/หลัง redeploy หรือยืนยัน backup จาก dashboard |
 | Database container persistence | มี named volume แต่ยังไม่ restart PostgreSQL container เพื่อตรวจซ้ำ |
 
 ## 14. Checklist เทียบข้อกำหนดข้อสอบ
@@ -552,7 +570,7 @@ bun run build
 - [x] **ครบตามข้อยกเว้นที่อาจารย์อนุญาต:** Frontend ใช้ Next.js + React แทน React + Vite โดยผู้จัดทำยืนยันว่าได้สอบถามอาจารย์แล้ว
 - [x] **ครบ:** Sequelize Event model มีฟิลด์/ชนิดตาม schema พร้อม validation/timestamps
 - [x] **ครบและทดสอบ local แล้ว:** RESTful endpoints ทั้ง 5 รายการ
-- [x] **ครบใน working tree:** DELETE ตอบ 200 พร้อม JSON message ตามโจทย์; Production ยังเป็น 204
+- [x] **ครบในโค้ดและ local test:** DELETE ตอบ 200 พร้อม JSON message ตามโจทย์; OpenAPI Production ระบุ 200 แล้ว แต่ยังไม่ทดสอบลบข้อมูล Production
 - [x] **ครบในโค้ด:** UI CRUD พร้อมรายละเอียดและยืนยันลบ
 - [ ] **ยังไม่ยืนยัน:** การกด UI CRUD แบบ end-to-end ใน browser
 - [x] **ครบและทดสอบแล้ว:** Backend search/category filtering รวมถึง query validation
@@ -566,8 +584,10 @@ bun run build
 - [x] **ครบ:** มี Production URL ของ Vercel/Render และ HTTP GET ตอบ 200
 - [x] **ครบสำหรับการอ่าน:** GET ผ่าน Vercel proxy และ Render API ได้จริง; local CORS test และ Production OPTIONS preflight ผ่าน
 - [x] **ครบเป็น configuration template:** `frontend/vercel.json` และ `render.yaml` ไม่มี secret
-- [ ] **ยังไม่ยืนยัน:** ค่า dashboard และ database provider ของ Production; CORS preflight ตรวจผ่านแล้ว
-- [ ] **ยังไม่ครบ:** deploy การแก้ไขรอบนี้ขึ้น Vercel/Render และตรวจเวอร์ชันใหม่
+- [x] **ยืนยัน provider จาก startup log:** Production ใช้ Neon PostgreSQL
+- [ ] **ยังไม่ยืนยัน:** ค่า dashboard และ backup/retention ของ Production; CORS preflight ตรวจผ่านแล้ว
+- [x] **ยืนยัน Backend deployment:** Render service live ตาม log; Events API/OpenAPI ตอบ 200 และ GET search/category ผ่าน
+- [x] **ยืนยันจากผู้จัดทำ:** deploy Frontend เวอร์ชันล่าสุดบน Vercel และ Backend เวอร์ชันล่าสุดบน Render ครบแล้ว
 - [x] **ครบและทดสอบ local แล้ว:** ข้อมูล PostgreSQL และ seed marker คงอยู่หลังเริ่ม Backend process ใหม่จริงสองครั้ง
 - [ ] **ยังไม่ยืนยัน:** Persistence หลัง Production redeploy และ restart PostgreSQL container
 - [x] **ครบและทดสอบแล้ว:** Frontend production build รวม TypeScript/static generation ผ่าน
@@ -577,7 +597,7 @@ bun run build
 ### สิ่งที่ต้องเติมหรือยืนยันก่อนส่ง
 
 1. ชื่อผู้จัดทำ รหัสนักศึกษา และรูปแบบชื่อ repository ที่อาจารย์กำหนด
-2. Deploy โค้ดล่าสุด โดยตรวจ build log/configuration บน Vercel/Render และ provider ของฐานข้อมูล
+2. ตรวจค่า dashboard/backup ของฐานข้อมูล Neon และเก็บ build logs หากต้องใช้ประกอบการส่งงาน
 3. Browser end-to-end และ Production mutation/persistence tests ที่ยังไม่ได้ทำ
 4. ภาพหน้าจอทั้ง 4 รายการเว้นไว้ตามคำขอ ไม่สร้างภาพสมมติ
 
