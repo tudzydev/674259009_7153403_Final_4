@@ -1,5 +1,6 @@
-import type { Event } from "@/tpyes/event";
-import type { EventInput } from "@/lib/event-validation";
+import type { Event, EventInput, EventFilters } from "@/types/event";
+import { filterEvents } from "@/lib/event-utils";
+import { isEvent } from "@/lib/event-validation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -36,7 +37,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     });
   } catch {
     throw new ApiError(
-      "Cannot connect to the event server. Make sure the backend is running and try again.",
+      "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์กิจกรรมได้ กรุณาตรวจสอบว่า backend กำลังทำงาน",
     );
   }
 
@@ -48,7 +49,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       "message" in body &&
       typeof body.message === "string"
         ? body.message
-        : `Event request failed (${response.status}). Please try again.`;
+        : `ดำเนินการไม่สำเร็จ (${response.status}) กรุณาลองอีกครั้ง`;
     throw new ApiError(message, response.status);
   }
 
@@ -57,9 +58,25 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const eventApi = {
-  async getAll(): Promise<Event[]> {
-    const result = await request<ApiResponse<Event[]>>("/api/events");
-    return result.data;
+  async getAll(
+    filters: EventFilters = {},
+    signal?: AbortSignal,
+  ): Promise<Event[]> {
+    const query = new URLSearchParams();
+    if (filters.search?.trim()) query.set("search", filters.search.trim());
+    if (filters.category) query.set("category", filters.category);
+    const result = await request<ApiResponse<unknown>>(
+      `/api/events${query.size ? `?${query}` : ""}`,
+      { signal },
+    );
+    if (!Array.isArray(result.data) || !result.data.every(isEvent)) {
+      throw new ApiError("รูปแบบข้อมูลกิจกรรมจากเซิร์ฟเวอร์ไม่ถูกต้อง");
+    }
+    // The current backend ignores query parameters; keep this compatibility
+    // filter until server-side filtering is available. Always send both filters.
+    return filterEvents(result.data, filters.search ?? "").filter(
+      (event) => !filters.category || event.category === filters.category,
+    );
   },
 
   async getById(id: number): Promise<Event> {
