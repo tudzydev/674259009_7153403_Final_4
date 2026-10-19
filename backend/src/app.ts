@@ -8,7 +8,7 @@ app.use(express.json());
 app.get("/api-docs.json", (_req, res) => {
   res.json(swaggerDocument);
 });
-app.get("/api-docs", (_req, res) => {
+app.get("/api/events/docs", (_req, res) => {
   res.type("html").send(swaggerHtml);
 });
 app.use("/api/events", eventRoutes);
