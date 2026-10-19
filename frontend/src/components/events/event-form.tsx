@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, FileClock, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { EVENT_CATEGORIES, type Event, type EventInput } from "@/types/event";
 import {
   validateEvent,
@@ -187,25 +188,22 @@ export function EventForm({
             </span>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div>
-            <Label htmlFor="status">เผยแพร่กิจกรรม</Label>
-            <p className="mt-1 text-xs text-slate-500">
-              {values.status
-                ? "กิจกรรมนี้จะแสดงเป็นสถานะเผยแพร่"
-                : "บันทึกกิจกรรมนี้เป็นฉบับร่าง"}
-            </p>
+        <fieldset id="status" aria-describedby={errors.status ? "status-error" : undefined}>
+          <legend className="text-sm font-medium text-slate-700">สถานะกิจกรรม</legend>
+          <p className="mt-1 text-xs leading-6 text-slate-500">ยังไม่พร้อมเผยแพร่? เก็บเป็นฉบับร่างแล้วกลับมาแก้ไขได้</p>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {[
+              { value: true, label: "เผยแพร่", description: "พร้อมแสดงในรายการ", icon: CheckCircle2 },
+              { value: false, label: "ฉบับร่าง", description: "เก็บไว้แก้ไขภายหลัง", icon: FileClock },
+            ].map(({ value, label, description, icon: Icon }) => (
+              <label key={label} className={cn("flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition focus-within:ring-2 focus-within:ring-indigo-400", values.status === value ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:bg-slate-50")}>
+                <input type="radio" name="publication-status" value={String(value)} checked={values.status === value} onChange={() => update("status", value)} className="mt-1 size-4 shrink-0 accent-indigo-600" />
+                <span><span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"><Icon className="size-4" />{label}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span>
+              </label>
+            ))}
           </div>
-          <input
-            {...attrs("status")}
-            type="checkbox"
-            role="switch"
-            checked={values.status}
-            onChange={(e) => update("status", e.target.checked)}
-            className="h-5 w-5 shrink-0 cursor-pointer accent-indigo-600 focus-visible:outline-2 focus-visible:outline-indigo-500"
-          />
           <ErrorText errors={errors} field="status" />
-        </div>
+        </fieldset>
       </fieldset>
       <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
         <Button
@@ -222,7 +220,7 @@ export function EventForm({
             ? "กำลังบันทึก..."
             : event
               ? "บันทึกการแก้ไข"
-              : "บันทึกกิจกรรม"}
+              : values.status ? "บันทึกและเผยแพร่" : "บันทึกฉบับร่าง"}
         </Button>
       </div>
     </form>

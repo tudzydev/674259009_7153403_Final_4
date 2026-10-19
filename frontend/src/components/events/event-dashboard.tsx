@@ -16,15 +16,11 @@ import {
   Plus,
   RefreshCw,
   Search,
-  SearchX,
-  Eye,
-  Pencil,
-  Trash2,
   X,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { eventApi, apiErrorMessage } from "@/lib/api";
-import { formatEventDate } from "@/lib/event-utils";
+import { formatEventDate, sortEventsByDate } from "@/lib/event-utils";
 import {
   EVENT_CATEGORIES,
   type Event,
@@ -48,10 +44,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Table, TableCell, TableHead } from "@/components/ui/table";
+import { EventList } from "./event-list";
 import {
-  CategoryBadge,
-  StatusBadge,
   EventDetailDialog,
   EventFormDialog,
   DeleteEventDialog,
@@ -72,7 +66,7 @@ function Navigation({
 }) {
   return (
     <>
-      <div className="px-3">
+      <div className="mx-auto w-40 shrink-0">
         <Image
           src="/logo.png"
           alt="Event Management ระบบจัดการกิจกรรม"
@@ -82,12 +76,12 @@ function Navigation({
           className="h-auto w-full"
         />
       </div>
-      <p className="mt-12 mb-3 px-4 text-[10px] font-semibold tracking-[.15em] text-slate-400">
+      <p className="mt-6 mb-3 px-4 text-[10px] font-semibold tracking-[.15em] text-slate-400">
         เมนูหลัก
       </p>
       <nav aria-label="เมนูหลัก" className="space-y-1.5">
         {[
-          { label: "Dashboard", icon: LayoutDashboard, value: true },
+          { label: "ภาพรวมกิจกรรม", icon: LayoutDashboard, value: true },
           { label: "จัดการกิจกรรม", icon: CalendarDays, value: false },
         ].map(({ label, icon: Icon, value }) => (
           <button
@@ -129,6 +123,8 @@ export function EventDashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<EventCategory | "all">("all");
+  const [status, setStatus] = useState<"all" | "published" | "draft">("all");
+  const [sort, setSort] = useState("date-asc");
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,10 +134,20 @@ export function EventDashboard() {
   const [dialog, setDialog] = useState<ActiveDialog>(null);
   const [pending, setPending] = useState(false);
   const operationLock = useRef(false);
-  const activeFilters = !!search.trim() || category !== "all";
+  const activeFilters = !!search.trim() || category !== "all" || status !== "all";
+  const filteredEvents = events.filter((event) => status === "all" || event.status === (status === "published"));
+  const visibleEvents = sort === "title"
+    ? [...filteredEvents].sort((a, b) => a.title.localeCompare(b.title, "th"))
+    : sortEventsByDate(filteredEvents, sort === "date-desc" ? "desc" : "asc");
+  const upcomingEvents = sortEventsByDate(events).filter((event) => event.status && event.eventDate >= new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())).slice(0, 3);
+  const showStatus = (value: typeof status) => {
+    setStatus(value);
+    setOverview(false);
+  };
   const reset = () => {
     setSearch("");
     setCategory("all");
+    setStatus("all");
   };
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -244,17 +250,19 @@ export function EventDashboard() {
     }
   }
   const navigate = (value: boolean) => {
+    if (value) reset();
     setOverview(value);
     setMobileOpen(false);
   };
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900">
+      <a href="#main-content" className="sr-only fixed top-3 left-3 z-[100] rounded-lg bg-indigo-600 px-4 py-3 text-white focus:not-sr-only">ข้ามไปยังเนื้อหา</a>
       <Toaster position="top-right" richColors closeButton />
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-slate-200/80 bg-white px-4 py-8 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col overflow-y-auto border-r border-slate-200/80 bg-white px-4 py-5 lg:flex">
         <Navigation overview={overview} onNavigate={navigate} />
       </aside>
       <div className="min-w-0 lg:pl-64">
-        <header className="flex h-[76px] items-center justify-between border-b border-slate-200/80 bg-white px-5 sm:px-8 lg:px-10">
+        <header className="sticky top-0 z-10 flex h-[68px] items-center justify-between border-b border-slate-200/80 bg-white px-5 sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
             <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
               <DialogTrigger asChild>
@@ -278,7 +286,7 @@ export function EventDashboard() {
             <span className="text-sm text-slate-400">พื้นที่ทำงาน</span>
             <ChevronRight className="size-3.5 text-slate-300" />
             <span className="text-sm font-medium">
-              {overview ? "Dashboard" : "จัดการกิจกรรม"}
+              {overview ? "ภาพรวมกิจกรรม" : "จัดการกิจกรรม"}
             </span>
           </div>
           <div className="hidden items-center gap-2 text-xs text-slate-400 sm:flex">
@@ -286,31 +294,31 @@ export function EventDashboard() {
             ระบบจัดการกิจกรรม
           </div>
         </header>
-        <main className="mx-auto max-w-[1536px] space-y-7 p-5 sm:p-8 lg:p-10">
+        <main id="main-content" className="mx-auto max-w-[1536px] space-y-6 p-4 sm:p-7 lg:p-8">
           <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
             <div>
               <p className="mb-2 text-[11px] font-semibold tracking-[.16em] text-indigo-500">
-                UNIVERSITY ACTIVITIES
+                พื้นที่สำหรับทุกกิจกรรมของมหาวิทยาลัย
               </p>
               <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">
                 {overview ? "ภาพรวมกิจกรรม" : "จัดการกิจกรรม"}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                บริหารจัดการข้อมูลกิจกรรม อบรม สัมมนา และจิตอาสา
+                ค้นหา จัดการ และติดตามสถานะกิจกรรมได้ในที่เดียว
               </p>
             </div>
             <Button
               onClick={() => setDialog({ kind: "create" })}
               disabled={pending}
-              className="w-full sm:w-auto"
+              className="h-12 w-full rounded-xl px-6 shadow-md shadow-indigo-200/60 sm:w-auto"
             >
               <Plus />
-              เพิ่มกิจกรรม
+              เพิ่มกิจกรรมใหม่
             </Button>
           </section>
           <section
             aria-label="สถิติกิจกรรมทั้งหมด"
-            className="grid gap-4 sm:grid-cols-3"
+            className="grid grid-cols-3 gap-2 sm:gap-4"
           >
             {[
               {
@@ -318,32 +326,38 @@ export function EventDashboard() {
                 value: stats?.total,
                 icon: CalendarDays,
                 color: "bg-indigo-50 text-indigo-600",
-                note: "กิจกรรมในระบบทั้งหมด",
+                note: "ดูรายการทั้งหมด",
+                filter: "all" as const,
               },
               {
                 label: "เผยแพร่แล้ว",
                 value: stats?.published,
                 icon: CheckCircle2,
                 color: "bg-emerald-50 text-emerald-600",
-                note: "กิจกรรมที่พร้อมเผยแพร่",
+                note: "ดูรายการที่เผยแพร่",
+                filter: "published" as const,
               },
               {
                 label: "ฉบับร่าง",
                 value: stats?.drafts,
                 icon: FileClock,
                 color: "bg-amber-50 text-amber-600",
-                note: "กิจกรรมที่รอการเผยแพร่",
+                note: "ดูรายการฉบับร่าง",
+                filter: "draft" as const,
               },
-            ].map(({ label, value, icon: Icon, color, note }) => (
-              <article
+            ].map(({ label, value, icon: Icon, color, note, filter }) => (
+              <button
                 key={label}
-                className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs"
+                type="button"
+                onClick={() => showStatus(filter)}
+                aria-pressed={!overview && status === filter}
+                className={cn("rounded-2xl border bg-white p-3 text-left shadow-xs transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-indigo-500 sm:p-5", !overview && status === filter ? "border-indigo-400 ring-1 ring-indigo-100" : "border-slate-200")}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-slate-500">{label}</p>
+                  <p className="text-xs font-medium text-slate-600 sm:text-sm">{label}</p>
                   <div
                     className={cn(
-                      "flex size-10 items-center justify-center rounded-lg",
+                      "hidden size-10 items-center justify-center rounded-xl sm:flex",
                       color,
                     )}
                   >
@@ -367,8 +381,8 @@ export function EventDashboard() {
                     value.toLocaleString("th-TH")
                   )}
                 </p>
-                <p className="mt-2 text-xs text-slate-400">{note}</p>
-              </article>
+                <p className="mt-2 hidden items-center gap-1 text-xs text-slate-500 sm:flex">{note}<ArrowRight className="size-3" /></p>
+              </button>
             ))}
           </section>
           {statsError && (
@@ -397,7 +411,15 @@ export function EventDashboard() {
                 ติดตามภาพรวมการเผยแพร่กิจกรรมของมหาวิทยาลัย
                 และจัดการข้อมูลกิจกรรม อบรม สัมมนา และจิตอาสาได้ในที่เดียว
               </p>
-              <Button className="mt-6" onClick={() => navigate(false)}>
+              <div className="mt-6 space-y-3">
+                <h3 className="text-sm font-semibold text-slate-700">กิจกรรมที่กำลังจะมาถึง</h3>
+                {loading ? <p className="text-sm text-slate-500">กำลังโหลดกิจกรรม...</p> : error ? <p className="text-sm text-slate-500">ยังโหลดรายการกิจกรรมไม่ได้ กรุณาลองรีเฟรชอีกครั้ง</p> : upcomingEvents.length ? upcomingEvents.map((event) => (
+                  <button key={event.id} onClick={() => setDialog({ kind: "detail", event })} className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3 text-left transition hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-indigo-500">
+                    <span className="min-w-0"><span className="block text-sm font-semibold leading-6">{event.title}</span><span className="mt-1 block text-xs text-slate-500">{formatEventDate(event.eventDate)} · {event.category}</span></span><ChevronRight className="size-4 shrink-0 text-slate-400" />
+                  </button>
+                )) : <p className="text-sm text-slate-500">ยังไม่มีกิจกรรมที่เผยแพร่และกำลังจะมาถึง</p>}
+              </div>
+              <Button className="mt-6" onClick={() => { reset(); navigate(false); }}>
                 ไปหน้าจัดการกิจกรรม
                 <ArrowRight />
               </Button>
@@ -411,7 +433,7 @@ export function EventDashboard() {
                 <div className="flex items-center gap-3">
                   <h2 className="font-semibold">รายการกิจกรรม</h2>
                   <span className="rounded-md bg-slate-100 px-2 py-1 text-xs tabular-nums text-slate-500">
-                    {loading || error ? "—" : `${events.length} รายการ`}
+                    {loading || error ? "—" : `${visibleEvents.length} รายการ`}
                   </span>
                 </div>
                 <Button
@@ -424,13 +446,16 @@ export function EventDashboard() {
                   <RefreshCw className={loading ? "animate-spin" : ""} />
                 </Button>
               </div>
-              <div className="flex flex-col gap-3 border-b border-slate-100 bg-white px-5 py-4 sm:flex-row sm:items-center sm:px-6">
-                <div className="relative flex-1">
+              <div className="flex flex-col gap-3 border-b border-slate-100 bg-white px-5 py-4 sm:flex-row sm:flex-wrap sm:items-end sm:px-6">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="event-search" className="mb-2 block text-xs font-semibold text-slate-600">ค้นหากิจกรรม</label>
+                  <div className="relative">
                   <Search className="pointer-events-none absolute top-3 left-3 size-4 text-slate-400" />
                   <Input
-                    aria-label="ค้นหาชื่อกิจกรรม"
+                    id="event-search"
+                    aria-label="ค้นหากิจกรรมหรือผู้จัด"
                     className="pr-10 pl-10"
-                    placeholder="ค้นหาชื่อกิจกรรม..."
+                    placeholder="ค้นหาชื่อกิจกรรม หรือผู้จัด..."
                     value={search}
                     disabled={pending}
                     onChange={(e) => {
@@ -450,8 +475,10 @@ export function EventDashboard() {
                       <X className="size-4" />
                     </button>
                   )}
+                  </div>
                 </div>
-                <div className="w-full sm:w-48">
+                <div className="w-full sm:w-40">
+                  <label htmlFor="category-filter" className="mb-2 block text-xs font-semibold text-slate-600">หมวดหมู่</label>
                   <Select
                     value={category}
                     disabled={pending}
@@ -460,7 +487,7 @@ export function EventDashboard() {
                       setCategory(value as EventCategory | "all");
                     }}
                   >
-                    <SelectTrigger aria-label="กรองหมวดหมู่">
+                    <SelectTrigger id="category-filter" aria-label="กรองหมวดหมู่">
                       <span className="flex items-center gap-2">
                         <ListFilter className="size-4 text-slate-400" />
                         <SelectValue />
@@ -476,11 +503,31 @@ export function EventDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="w-full sm:w-40">
+                  <label htmlFor="sort-events" className="mb-2 block text-xs font-semibold text-slate-600">เรียงลำดับ</label>
+                  <Select value={sort} onValueChange={setSort}>
+                    <SelectTrigger id="sort-events" aria-label="เรียงลำดับกิจกรรม"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date-asc">วันที่ใกล้ที่สุดก่อน</SelectItem>
+                      <SelectItem value="date-desc">วันที่ไกลที่สุดก่อน</SelectItem>
+                      <SelectItem value="title">ชื่อกิจกรรม ก–ฮ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {activeFilters && (
                   <Button variant="ghost" disabled={pending} onClick={reset}>
                     ล้างตัวกรอง
                   </Button>
                 )}
+              </div>
+              <div className="flex flex-wrap gap-2 border-b border-slate-100 px-5 py-3 sm:px-6" role="group" aria-label="กรองสถานะกิจกรรม">
+                {([
+                  ["all", "ทุกสถานะ"],
+                  ["published", "เผยแพร่แล้ว"],
+                  ["draft", "ฉบับร่าง"],
+                ] as const).map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={status === value} onClick={() => setStatus(value)} className={cn("min-h-10 rounded-full px-4 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-indigo-500", status === value ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>{label}</button>
+                ))}
               </div>
               {error ? (
                 <div
@@ -502,169 +549,15 @@ export function EventDashboard() {
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <caption className="sr-only">
-                    ข้อมูลกิจกรรมของมหาวิทยาลัย
-                  </caption>
-                  <thead className="border-b border-slate-100 bg-slate-50/80">
-                    <tr>
-                      {[
-                        "รหัส",
-                        "ชื่อกิจกรรม",
-                        "ผู้จัด",
-                        "หมวดหมู่",
-                        "วันที่จัด",
-                        "สถานะ",
-                        "จัดการ",
-                      ].map((label) => (
-                        <TableHead
-                          key={label}
-                          className={label === "จัดการ" ? "text-right" : ""}
-                        >
-                          {label}
-                        </TableHead>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody aria-busy={loading}>
-                    {loading ? (
-                      Array.from({ length: 5 }, (_, i) => (
-                        <tr
-                          key={i}
-                          className="border-b border-slate-100 last:border-0"
-                        >
-                          {Array.from({ length: 7 }, (_, j) => (
-                            <TableCell key={j}>
-                              <div
-                                className={cn(
-                                  "h-4 animate-pulse rounded bg-slate-100",
-                                  j === 1 ? "w-48" : "w-16",
-                                )}
-                              />
-                            </TableCell>
-                          ))}
-                        </tr>
-                      ))
-                    ) : events.length === 0 ? (
-                      <tr>
-                        <TableCell colSpan={7}>
-                          <div className="flex flex-col items-center py-16 text-center">
-                            <div className="mb-5 rounded-full bg-slate-50 p-5 text-slate-400">
-                              {activeFilters ? (
-                                <SearchX className="size-8" />
-                              ) : (
-                                <CalendarDays className="size-8" />
-                              )}
-                            </div>
-                            <h3 className="font-semibold">
-                              {activeFilters
-                                ? "ไม่พบกิจกรรมที่ตรงกับเงื่อนไขการค้นหา"
-                                : "ยังไม่มีข้อมูลกิจกรรม"}
-                            </h3>
-                            <p className="mt-2 text-sm text-slate-400">
-                              {activeFilters
-                                ? "ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น"
-                                : "เริ่มต้นสร้างกิจกรรมแรกของมหาวิทยาลัยได้เลย"}
-                            </p>
-                            <Button
-                              className="mt-6"
-                              variant={activeFilters ? "outline" : "default"}
-                              onClick={() =>
-                                activeFilters
-                                  ? reset()
-                                  : setDialog({ kind: "create" })
-                              }
-                            >
-                              {activeFilters ? (
-                                "ล้างตัวกรอง"
-                              ) : (
-                                <>
-                                  <Plus />
-                                  เพิ่มกิจกรรม
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </tr>
-                    ) : (
-                      events.map((event) => (
-                        <tr
-                          key={event.id}
-                          className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/70"
-                        >
-                          <TableCell className="text-xs tabular-nums text-slate-400">
-                            #{String(event.id).padStart(3, "0")}
-                          </TableCell>
-                          <TableCell>
-                            <button
-                              onClick={() =>
-                                setDialog({ kind: "detail", event })
-                              }
-                              className="block max-w-72 truncate text-left font-medium text-slate-800 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-indigo-500"
-                              title={event.title}
-                            >
-                              {event.title}
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className="block max-w-40 truncate text-slate-500"
-                              title={event.organizer}
-                            >
-                              {event.organizer}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <CategoryBadge category={event.category} />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-slate-500">
-                            {formatEventDate(event.eventDate)}
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={event.status} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-0.5">
-                              {[
-                                {
-                                  kind: "detail",
-                                  label: "ดูรายละเอียด",
-                                  icon: Eye,
-                                },
-                                { kind: "edit", label: "แก้ไข", icon: Pencil },
-                                { kind: "delete", label: "ลบ", icon: Trash2 },
-                              ].map(({ kind, label, icon: Icon }) => (
-                                <Button
-                                  key={kind}
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={pending}
-                                  aria-label={`${label}: ${event.title}`}
-                                  title={label}
-                                  className={
-                                    kind === "delete"
-                                      ? "hover:bg-red-50 hover:text-red-600"
-                                      : "hover:bg-indigo-50 hover:text-indigo-600"
-                                  }
-                                  onClick={() =>
-                                    setDialog({
-                                      kind: kind as
-                                        "detail" | "edit" | "delete",
-                                      event,
-                                    })
-                                  }
-                                >
-                                  <Icon />
-                                </Button>
-                              ))}
-                            </div>
-                          </TableCell>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
+                <EventList
+                  events={visibleEvents}
+                  loading={loading}
+                  pending={pending}
+                  activeFilters={activeFilters}
+                  onReset={reset}
+                  onCreate={() => setDialog({ kind: "create" })}
+                  onAction={(kind, event) => setDialog({ kind, event })}
+                />
               )}
               <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-xs text-slate-400 sm:px-6">
                 <span role="status">
@@ -676,7 +569,7 @@ export function EventDashboard() {
                   ) : error ? (
                     "โหลดข้อมูลไม่สำเร็จ"
                   ) : (
-                    `แสดง ${events.length.toLocaleString("th-TH")} รายการ${activeFilters ? "ตามเงื่อนไขการค้นหา" : "ทั้งหมด"}`
+                    `แสดง ${visibleEvents.length.toLocaleString("th-TH")} รายการ${activeFilters ? "ตามเงื่อนไขการค้นหา" : "ทั้งหมด"}`
                   )}
                 </span>
                 <span className="hidden sm:inline">เวลาประเทศไทย (GMT+7)</span>

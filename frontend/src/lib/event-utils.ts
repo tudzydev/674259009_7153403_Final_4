@@ -35,6 +35,6 @@ export function sortEventsByDate(
 export function filterEvents(events: readonly Event[], query: string): Event[] {
   const search = query.trim().toLowerCase();
   return events.filter((event) =>
-    [event.title].some((value) => value.toLowerCase().includes(search)),
+    [event.title, event.organizer].some((value) => value.toLowerCase().includes(search)),
   );
 }
