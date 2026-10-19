@@ -119,7 +119,7 @@ function Navigation({
 }
 
 export function EventDashboard() {
-  const [overview, setOverview] = useState(false);
+  const [overview, setOverview] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<EventCategory | "all">("all");
