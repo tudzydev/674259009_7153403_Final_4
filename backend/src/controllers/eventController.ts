@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import { Op, type WhereOptions } from "sequelize";
 import { Event } from "../models/eventModel";
 
 type EventHandler = RequestHandler<{ id: string }, unknown, unknown>;
@@ -21,7 +22,11 @@ function isRequiredText(value: unknown, maxLength: number): value is string {
 }
 
 function isEventDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    value.startsWith("0000")
+  ) {
     return false;
   }
 
@@ -72,8 +77,31 @@ function eventValues(input: EventInput): EventInput {
   };
 }
 
-export const getEvents: RequestHandler = async (_req, res) => {
+export const getEvents: RequestHandler = async (req, res) => {
+  const { search, category } = req.query;
+  if (
+    (search !== undefined && typeof search !== "string") ||
+    (category !== undefined &&
+      (typeof category !== "string" ||
+        !["", "อบรม", "สัมมนา", "จิตอาสา"].includes(category)))
+  ) {
+    res.status(400).json({ error: "Invalid event filters" });
+    return;
+  }
+
+  const where: { category?: string; [Op.or]?: WhereOptions[] } = {};
+  if (typeof search === "string" && search.trim()) {
+    // Treat SQL LIKE wildcards as literal characters in the user's search.
+    const pattern = `%${search.trim().replace(/[\\%_]/g, "\\$&")}%`;
+    where[Op.or] = [
+      { title: { [Op.iLike]: pattern } },
+      { organizer: { [Op.iLike]: pattern } },
+    ];
+  }
+  if (typeof category === "string" && category) where.category = category;
+
   const events = await Event.findAll({
+    where,
     order: [
       ["eventDate", "ASC"],
       ["id", "ASC"],
@@ -139,5 +167,5 @@ export const deleteEvent: EventHandler = async (req, res) => {
     res.status(404).json({ error: "Event not found" });
     return;
   }
-  res.status(204).end();
+  res.status(200).json({ message: "Event deleted successfully" });
 };

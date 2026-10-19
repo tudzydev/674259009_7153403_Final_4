@@ -14,11 +14,11 @@ The `seed_runs` table records `initial-events-v1` in the same transaction as the
 
 | Method | Path | Behavior |
 | --- | --- | --- |
-| GET | `/api/events` | List events ordered by event date |
+| GET | `/api/events` | List events ordered by event date; supports search/category queries |
 | GET | `/api/events/:id` | Read one event |
 | POST | `/api/events` | Create an event |
 | PUT | `/api/events/:id` | Update an event with all required fields |
-| DELETE | `/api/events/:id` | Delete an event; return 204 |
+| DELETE | `/api/events/:id` | Delete an event; return 200 with a JSON message |
 
 POST and PUT accept JSON:
 
@@ -33,16 +33,18 @@ POST and PUT accept JSON:
 }
 ```
 
+`GET /api/events?search=term&category=อบรม` searches title/organizer case-insensitively and combines an exact category filter. SQL wildcards in search are treated literally. Invalid/repeated filter values return 400.
+
 `status` is optional: it defaults to true on creation and retains its current value when omitted during update. Categories are `อบรม`, `สัมมนา`, and `จิตอาสา`. Only the documented input fields are saved.
 
 Responses wrap event data in `{ "data": ... }`. Invalid input or IDs return 400, missing events return 404, and unexpected failures return 500.
 
-Run `bun run typecheck` and `bun test` to verify types and database configuration. Configuration tests do not require PostgreSQL.
+Run `bun run typecheck` and `bun test` to verify types and database configuration. Configuration tests do not require PostgreSQL. Run `bun run test:integration` to verify HTTP CRUD, filtering, errors, CORS, seed behavior, and persistence after actual backend process restarts using a temporary schema on local PostgreSQL.
 
-Run `RUN_DB_TESTS=1 bun --env-file=.env.local test tests/event-seed.integration.test.ts` to verify seeding against PostgreSQL. This test creates and removes a temporary schema and checks concurrent seeds, repeat runs, existing records, and preservation of edited/deleted records.
+Run `bun run test:integration` (optionally export `TEST_DATABASE_URL` for a local test database first) to verify seeding against PostgreSQL. This test creates and removes a temporary schema and checks concurrent seeds, repeat runs, existing records, and preservation of edited/deleted records.
 
 Check connectivity without changing tables with `bun run db:check:local` or `bun run db:check:neon`. Use `bun run db:check` when environment variables are already exported.
 
 Local Docker settings: `DATABASE_PROVIDER=local` and `DATABASE_URL=postgres://postgres:postgres@localhost:5433/event_db`. Start PostgreSQL from the project root with `docker compose up -d postgres`. The Compose healthcheck database should match `POSTGRES_DB` (`event_db`).
 
-Swagger UI is available at `http://localhost:3000/api-docs` (adjust the port if needed). Use **Try it out** to call the API. The OpenAPI JSON is available at `/api-docs.json`. Swagger UI loads its assets from unpkg.com and requires internet access; the JSON specification is served locally.
+Swagger UI is available at `http://localhost:4000/api/events/docs` (set `PORT=4000`; adjust the port if needed). Use **Try it out** to call the API. The OpenAPI JSON is available at `/api-docs.json`. Swagger UI loads its assets from unpkg.com and requires internet access; the JSON specification is served locally.

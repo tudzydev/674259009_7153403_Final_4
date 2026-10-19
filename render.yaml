@@ -1,0 +1,21 @@
+# Deployment template; not evidence of the existing Render dashboard settings.
+# Review the service name before connecting this Blueprint to an existing project.
+services:
+  - type: web
+    name: event-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/events
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PROVIDER
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_CONNECT_TIMEOUT_MS
+        value: "10000"
+      - key: FRONEND_URL
+        value: https://674259009-7153403-final-d.vercel.app

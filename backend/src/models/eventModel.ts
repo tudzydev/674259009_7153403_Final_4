@@ -59,7 +59,11 @@ Event.init(
       },
       validate: {
         isValidDate(value: unknown) {
-          if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          if (
+            typeof value !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+            value.startsWith("0000")
+          ) {
             throw new Error(
               "eventDate must be a valid date in YYYY-MM-DD format",
             );

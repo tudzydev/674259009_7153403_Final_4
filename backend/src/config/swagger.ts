@@ -85,7 +85,21 @@ export const swaggerDocument = {
         tags: ["Events"],
         operationId: "getEvents",
         summary: "List events",
-        description: "Ordered by eventDate ascending, then id ascending.",
+        description:
+          "Search title/organizer and filter by category. Ordered by eventDate ascending, then id ascending.",
+        parameters: [
+          {
+            name: "search",
+            in: "query",
+            schema: { type: "string" },
+            description: "Case-insensitive literal substring of title or organizer",
+          },
+          {
+            name: "category",
+            in: "query",
+            schema: { type: "string", enum: ["อบรม", "สัมมนา", "จิตอาสา"] },
+          },
+        ],
         responses: {
           "200": {
             description: "Event list",
@@ -104,6 +118,7 @@ export const swaggerDocument = {
               },
             },
           },
+          "400": errorResponse("Invalid event filters"),
           "500": errorResponse("Internal server error"),
         },
       },
@@ -151,7 +166,20 @@ export const swaggerDocument = {
         operationId: "deleteEvent",
         summary: "Delete an event",
         responses: {
-          "204": { description: "Event deleted; no response body" },
+          "200": {
+            description: "Event deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["message"],
+                  properties: {
+                    message: { type: "string", example: "Event deleted successfully" },
+                  },
+                },
+              },
+            },
+          },
           "400": errorResponse("Invalid event ID"),
           "404": errorResponse("Event not found"),
           "500": errorResponse("Internal server error"),

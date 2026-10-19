@@ -14,13 +14,15 @@
 
 เอกสารนี้จัดทำจากซอร์สโค้ดและ configuration ใน repository เมื่อวันที่ 19 ตุลาคม 2569 โดยแยกการมี implementation ออกจากผลทดสอบการทำงานจริง
 
-> **ข้อแตกต่างจากข้อสอบ:** Frontend ใช้ **Next.js App Router + React** ไม่ใช่ React + Vite ส่วน `DELETE /api/events/:id` ตอบกลับ **204 No Content** ไม่ใช่ 200 และ Backend ยังไม่รองรับ search/category filtering ผ่าน query parameters
+> **การใช้ Frontend:** โครงการใช้ **Next.js App Router + React** แทน React + Vite โดยผู้จัดทำยืนยันว่าได้สอบถามอาจารย์และได้รับอนุญาตแล้ว จึงใช้ Next.js ต่อไปได้โดยไม่ต้องย้าย framework
+
+Backend ปรับให้ DELETE ตอบ **200** และรองรับ search/category filtering ผ่าน query parameters แล้วใน working tree; Production ที่ตรวจยังเป็นเวอร์ชันเดิม
 
 ## 2. ภาพรวมโครงงาน
 
 ระบบใช้บันทึกและบริหารกิจกรรมประเภท **อบรม สัมมนา และจิตอาสา** ผู้ใช้สามารถดูรายการและรายละเอียด เพิ่ม แก้ไข ลบกิจกรรม และกำหนดสถานะเผยแพร่หรือฉบับร่างได้ ข้อมูลถูกอ่านและเขียนผ่าน REST API ไปยัง PostgreSQL ด้วย Sequelize ไม่ใช่ข้อมูลจำลองที่เก็บเฉพาะในหน่วยความจำหรือ browser
 
-หน้าจอมีภาพรวมจำนวนกิจกรรม กิจกรรมที่กำลังจะมาถึง การค้นหาจากชื่อกิจกรรมหรือผู้จัด การกรองหมวดหมู่และสถานะ และการเรียงตามวันที่หรือชื่อ การค้นหาและกรองทำที่ Frontend หลังรับรายการจาก API รายละเอียดและฟอร์มเปิดเป็น dialog บนหน้า `/` ไม่ได้มี URL แยกสำหรับแต่ละหน้า
+หน้าจอมีภาพรวมจำนวนกิจกรรม กิจกรรมที่กำลังจะมาถึง การค้นหาจากชื่อกิจกรรมหรือผู้จัด การกรองหมวดหมู่และสถานะ และการเรียงตามวันที่หรือชื่อ การค้นหาชื่อ/ผู้จัดและกรองหมวดหมู่ทำผ่าน Backend แล้ว Frontend ยังตรวจกรองซ้ำเพื่อรองรับ API รุ่นเดิม ส่วนการกรองสถานะทำที่ Frontend รายละเอียดและฟอร์มเปิดเป็น dialog บนหน้า `/` ไม่ได้มี URL แยกสำหรับแต่ละหน้า
 
 ### การใช้งานระบบออนไลน์ (Live Demo)
 
@@ -32,7 +34,9 @@
 | Swagger API Documentation | [Swagger UI — getEvents](https://event-backend-5m5f.onrender.com/api/events/docs#/Events/getEvents) |
 | OpenAPI JSON | [API specification](https://event-backend-5m5f.onrender.com/api-docs.json) |
 
-Frontend, Backend, Events API และ Swagger URL เป็นข้อมูล deployment ที่ผู้ใช้ยืนยันให้มา ส่วน OpenAPI JSON เป็น URL ที่ประกอบจาก Backend URL และ route ในซอร์สโค้ด การเปิด Frontend, Events API และ Swagger ผ่านเครื่องมือเว็บในรอบจัดทำเอกสารนี้ไม่สำเร็จ จึงยังไม่ยืนยันสถานะ HTTP หรือการทำงานออนไลน์จากการตรวจครั้งนี้ การเปิด Backend `/` ไม่ใช่ health check เพราะโค้ดไม่มี route ดังกล่าว
+ตรวจด้วย HTTP GET เมื่อวันที่ 19 ตุลาคม 2569 แล้ว Frontend, Events API, Swagger, OpenAPI JSON และ `/api/events` ผ่าน Vercel proxy ตอบ **200** ทั้งหมด การตรวจล่าสุดเวลา 09:05 UTC พบ API มี **13 รายการ**: อบรม 6, สัมมนา 3, จิตอาสา 4 รวมเผยแพร่ 7 และฉบับร่าง 6 โดย Render และ Vercel proxy คืน JSON ตรงกัน การตรวจครั้งก่อนหน้าพบ 15 รายการ จึงบันทึกจำนวนตามเวลาตรวจและไม่ถือว่าจำนวนต้องคงที่ รอบนี้ไม่ได้ส่ง mutation ไป Production
+
+**Production ยังไม่ได้ deploy การแก้ไขรอบนี้:** OpenAPI ออนไลน์ยังระบุ DELETE 204 และไม่มี search/category query parameters จึงไม่ถือว่าคุณสมบัติใหม่ทำงานบน Production แล้ว ยังไม่ได้ทดสอบ POST/PUT/DELETE บน Production การเปิด Backend `/` ไม่ใช่ health check เพราะไม่มี route ดังกล่าว
 
 สถาปัตยกรรม Production ตามปลายทางที่ให้มาและ configuration ในโค้ด:
 
@@ -66,6 +70,7 @@ Browser เรียก `/api/events` บน origin ของ Frontend จาก
 .
 ├── README.md
 ├── docker-compose.yml
+├── render.yaml                       # template สำหรับ Render ยังไม่ได้ apply
 ├── backend/
 │   ├── .env.example
 │   ├── .gitignore
@@ -76,6 +81,7 @@ Browser เรียก `/api/events` บน origin ของ Frontend จาก
 │   ├── bun.lock
 │   ├── tsconfig.json
 │   ├── index.ts
+│   ├── tests/                        # configuration, HTTP/DB integration และ test server fixture
 │   ├── scripts/
 │   │   ├── check-db.ts
 │   │   └── seed.ts
@@ -105,6 +111,8 @@ Browser เรียก `/api/events` บน origin ของ Frontend จาก
     ├── README.md
     ├── package.json
     ├── bun.lock
+    ├── vercel.json
+    ├── tests/events.test.ts
     ├── next.config.ts
     ├── eslint.config.mjs
     ├── tsconfig.json
@@ -120,7 +128,7 @@ Browser เรียก `/api/events` บน origin ของ Frontend จาก
 
 `server.ts` เชื่อมฐานข้อมูล สร้างตารางที่ยังไม่มี seed และเริ่ม server ส่วน `app.ts` ตั้งค่า CORS, JSON parser, Swagger, routes และ error handler `controllers/` จัดการ CRUD และตรวจ request ขณะที่ `models/` กำหนด schema และ `seeds/` จัดการข้อมูลเริ่มต้น
 
-Frontend ใช้ `event-dashboard.tsx` ควบคุมสถานะหน้าจอและเรียก API, `event-list.tsx` แสดงรายการ, `event-form.tsx` รับข้อมูล และ `event-dialogs.tsx` แสดงรายละเอียด/ฟอร์ม/ยืนยันลบ การ rewrite อยู่ใน `next.config.ts` ไม่พบ `vercel.json`, `render.yaml`, migration directory หรือไฟล์ทดสอบใน repository ที่ตรวจ
+Frontend ใช้ `event-dashboard.tsx` ควบคุมสถานะหน้าจอและเรียก API, `event-list.tsx` แสดงรายการ, `event-form.tsx` รับข้อมูล และ `event-dialogs.tsx` แสดงรายละเอียด/ฟอร์ม/ยืนยันลบ การ rewrite อยู่ใน `next.config.ts` เพิ่ม `frontend/vercel.json`, `render.yaml`, `backend/tests/` และ `frontend/tests/` แล้ว ไม่พบ migration directory
 
 ## 5. โครงสร้างฐานข้อมูล
 
@@ -140,7 +148,7 @@ Frontend ใช้ `event-dashboard.tsx` ควบคุมสถานะหน
 
 ฟิลด์หลักตรงกับ schema ที่ระบุในโจทย์ และเปิด `timestamps: true` หมวดหมู่เป็น STRING พร้อม Sequelize validation ไม่ใช่ database ENUM ข้อจำกัดความยาว description เป็น validation ของ model ไม่ใช่ชนิด `VARCHAR(2000)` ในฐานข้อมูล
 
-Controller ตรวจซ้ำก่อนบันทึก โดยข้อความต้องเป็น string ที่มีอักขระนอกเหนือจากช่องว่าง วันที่ต้องมีอยู่จริง และ `status` ถ้าส่งมาต้องเป็น boolean Frontend trim ข้อความก่อนส่งและไม่รับปี `0000` ขณะที่ Backend ไม่มีเงื่อนไขห้ามปี `0000` แยกไว้อย่างเดียวกับ Frontend
+Controller ตรวจซ้ำก่อนบันทึก โดยข้อความต้องเป็น string ที่มีอักขระนอกเหนือจากช่องว่าง วันที่ต้องมีอยู่จริง และ `status` ถ้าส่งมาต้องเป็น boolean Frontend trim ข้อความก่อนส่ง ทั้ง Frontend, Controller และ Model ไม่รับปี `0000`
 
 มีตาราง `seed_runs` เพิ่มเติม ใช้ `key STRING(100)` เป็น primary key ไม่มี timestamps เพื่อบันทึก marker `initial-events-v1` ป้องกัน seed ซ้ำ การเริ่มระบบใช้ `sequelize.sync()` โดยไม่ใช้ `force` หรือ `alter` จึงสร้างตารางที่ขาด แต่ไม่ใช่ migration สำหรับเปลี่ยน schema เดิม
 
@@ -305,11 +313,11 @@ docker compose down
 | GET | `/api/events/:id` | รายละเอียดหนึ่งรายการ | 200 |
 | POST | `/api/events` | เพิ่มกิจกรรม | 201 |
 | PUT | `/api/events/:id` | แก้ไขกิจกรรม ส่ง required fields ให้ครบ | 200 |
-| DELETE | `/api/events/:id` | ลบกิจกรรม ไม่มี response body | **204** |
+| DELETE | `/api/events/:id` | ลบกิจกรรม ตอบ JSON message | **200** |
 | GET | `/api/events/docs` | Swagger UI | 200 ตามโค้ด |
 | GET | `/api-docs.json` | OpenAPI 3.0.3 specification | 200 ตามโค้ด |
 
-สถานะในตารางเป็นพฤติกรรมที่เขียนไว้ในโค้ด ไม่ใช่ผลทดสอบ Production ไม่มี PATCH endpoint และ `PUT` ไม่ใช่ partial update
+สถานะ CRUD ในตารางยืนยันด้วย integration tests บน PostgreSQL local แล้ว ไม่ใช่ผลทดสอบ mutation บน Production ไม่มี PATCH endpoint และ `PUT` ไม่ใช่ partial update
 
 ### Request: POST / PUT
 
@@ -348,29 +356,32 @@ docker compose down
 }
 ```
 
-GET list ตอบ `{"data": [ ... ]}` โดยแต่ละสมาชิกมีโครงสร้างเหมือน object ใน `data` ด้านบน หากไม่มีรายการตอบ `{"data": []}` ส่วน DELETE สำเร็จตอบ **204 พร้อม body ว่าง**
+GET list ตอบ `{"data": [ ... ]}` โดยแต่ละสมาชิกมีโครงสร้างเหมือน object ใน `data` ด้านบน หากไม่มีรายการตอบ `{"data": []}` ส่วน DELETE สำเร็จตอบ **200** พร้อม `{"message":"Event deleted successfully"}` โดย Frontend ยังรองรับ 204 จาก API เวอร์ชันเก่า
 
 ### Query parameters และการกรอง
 
 | Parameter | Frontend ส่งอย่างไร | พฤติกรรม Backend ปัจจุบัน |
 | --- | --- | --- |
-| `search` | คำค้นที่ trim แล้ว | ไม่อ่าน query; ยังคืนรายการทั้งหมด |
-| `category` | หมวดหมู่ที่เลือก | ไม่อ่าน query; ยังคืนรายการทั้งหมด |
+| `search` | คำค้นที่ trim แล้ว | ค้น substring ของ title หรือ organizer แบบไม่สนตัวพิมพ์เล็กใหญ่ด้วย PostgreSQL ILIKE |
+| `category` | หมวดหมู่ที่เลือก | กรองตรงค่าเฉพาะ `อบรม`, `สัมมนา`, `จิตอาสา`; ใช้ร่วมกับ search ได้ |
 
-ตัวอย่าง `GET /api/events?search=Excel&category=อบรม` ยังไม่กรองที่ server `eventApi.getAll()` จะกรองชื่อกิจกรรม/ผู้จัดแบบ substring ไม่สนตัวพิมพ์เล็กใหญ่ แล้วกรองหมวดหมู่แบบตรงค่าใน Frontend อีกครั้ง การกรองสถานะและเรียงลำดับเพิ่มเติมทำใน dashboard ไม่มี server-side pagination
+ตัวอย่าง `GET /api/events?search=Excel&category=อบรม` ค้นหาและกรองที่ server โดย `%`, `_` และ backslash ในคำค้นเป็นอักขระปกติ ไม่ใช่ SQL wildcard ค่าว่างไม่จำกัดผลลัพธ์; query ที่ส่งหลายค่าใน key เดียว หรือหมวดหมู่ที่ไม่รองรับ ตอบ 400 `Invalid event filters`
+
+`eventApi.getAll()` ยังกรองผลซ้ำใน Frontend เพื่อรองรับ Production รุ่นเก่าที่ยังไม่กรองฝั่ง server การกรองสถานะและเรียงลำดับเพิ่มเติมทำใน dashboard ไม่มี server-side pagination
 
 ### Error responses
 
 | HTTP | ตัวอย่าง body | เงื่อนไขตามโค้ด |
 | --- | --- | --- |
 | 400 | `{"error":"Invalid event ID"}` | ID ไม่ถูกต้อง |
+| 400 | `{"error":"Invalid event filters"}` | search/category มีชนิดหรือค่าที่ไม่รองรับ |
 | 400 | `{"error":"Invalid event input"}` | required fields, type, ความยาว, หมวดหมู่, วันที่ หรือ Sequelize validation ไม่ผ่าน |
 | 400 | `{"error":"Invalid JSON request"}` | JSON request ไม่ถูกต้อง |
 | 404 | `{"error":"Event not found"}` | ไม่พบกิจกรรม |
 | 404 | `{"error":"Route not found"}` | ไม่มี route ที่เรียก |
 | 500 | `{"error":"Internal server error"}` | ข้อผิดพลาดที่ไม่เข้าเงื่อนไขข้างต้น เช่น database query ล้มเหลวหลังเปิด server |
 
-Backend ไม่ส่งรายละเอียด database error ให้ client หากเชื่อมฐานข้อมูลไม่ได้ตั้งแต่ startup ระบบจะไม่เปิด listener จึงไม่ใช่กรณีตอบ HTTP 500 จาก server ที่พร้อมใช้งาน Frontend อ่าน error key `message` แต่ Backend ส่ง `error` จึงมักแสดงข้อความ fallback พร้อม HTTP status แทนข้อความเฉพาะจาก Backend
+Backend ไม่ส่งรายละเอียด database error ให้ client หากเชื่อมฐานข้อมูลไม่ได้ตั้งแต่ startup ระบบจะไม่เปิด listener จึงไม่ใช่กรณีตอบ HTTP 500 จาก server ที่พร้อมใช้งาน Frontend อ่าน error key `error` และ fallback `message` พร้อมเก็บ HTTP status แล้ว จึงแสดงข้อความจาก Backend ผ่าน error state/toast ได้
 
 ## 10. ความสามารถของหน้าจอ
 
@@ -390,7 +401,7 @@ Backend ไม่ส่งรายละเอียด database error ให�
 | Empty / Error | แยกไม่มีข้อมูลกับไม่พบตามคำค้น, มีปุ่มล้างตัวกรองและลองใหม่เมื่อโหลดล้มเหลว |
 | Toast | Sonner แจ้งผลเพิ่ม/แก้ไข/ลบสำเร็จหรือไม่สำเร็จ |
 
-ข้อที่ยังขาดหรือแตกต่าง: ไม่ใช้ Vite, Backend ไม่กรอง query, ไม่พบ automated tests และข้อความ error ระหว่าง API กับ Frontend ใช้ key ไม่ตรงกัน ยังไม่อ้างว่าการทำงาน end-to-end ผ่านการทดสอบ
+สิ่งที่ยังต้องตรวจคือการกดใช้งาน UI ผ่าน browser จริง ส่วนการใช้ Next.js ได้รับอนุญาตจากอาจารย์แล้วตามข้อมูลที่ผู้จัดทำยืนยัน Automated tests ยืนยัน API/ฐานข้อมูลและ Frontend validation/API client แล้วตามหัวข้อ 13
 
 ## 11. ภาพหน้าจอ
 
@@ -435,7 +446,7 @@ Markdown image references ต่อไปนี้เป็น **placeholder ร
 | Output Directory | ใช้ค่าเริ่มต้นของ Next.js preset; build อยู่ `.next` และมี standalone output ตาม `next.config.ts` ไม่ใช่ `dist` |
 | Environment | `BACKEND_API_URL=https://event-backend-5m5f.onrender.com` หรือ `NEXT_PUBLIC_API_URL` เป็น fallback |
 
-ไม่พบ `vercel.json` หรือ metadata deployment ที่ยืนยันค่า dashboard รายการ root/build/output ข้างต้นเป็นค่าตั้งต้นที่อนุมานได้จากโค้ดและ scripts ต้องตรวจ dashboard ว่าใช้จริงตามนี้ แล้ว redeploy เมื่อเปลี่ยน API destination Production ไม่ใช้ `bun run start` เป็น Vercel start command ส่วนการรัน production build เองใช้ `bun run build` แล้ว `bun run start` ภายใน `frontend/`
+มี [frontend/vercel.json](frontend/vercel.json) กำหนด framework/install/build commands แล้ว ส่วน Root Directory `frontend` และ API environment ต้องตั้งใน dashboard และยังไม่ได้ apply ไฟล์ใหม่นี้บน Production เปลี่ยน API destination แล้วต้อง redeploy รายละเอียดรูปแบบไฟล์อ้างอิง [Vercel configuration](https://vercel.com/docs/project-configuration/vercel-json) Production ไม่ใช้ `bun run start` เป็น Vercel start command ส่วนการรัน production build เองใช้ `bun run build` แล้ว `bun run start` ภายใน `frontend/`
 
 ### Backend — Render
 
@@ -452,117 +463,122 @@ Markdown image references ต่อไปนี้เป็น **placeholder ร
 | CORS environment | `FRONEND_URL=https://674259009-7153403-final-d.vercel.app` |
 | API Base URL | [Events API](https://event-backend-5m5f.onrender.com/api/events) |
 
-ไม่พบ `render.yaml` จึงยังไม่ยืนยัน runtime และคำสั่งที่ตั้งจริงบน Render Dashboard หากใช้ Docker runtime ไม่ต้องนำ Build/Start Command ของ native runtime ไปตั้งทับ Dockerfile ทุกครั้งที่เริ่ม server จะ authenticate, sync และตรวจ marker ก่อน seed ไม่พบ health endpoint แยก; Compose ใช้ GET `/api/events` ตรวจ readiness
+มี [render.yaml](render.yaml) เป็น Docker deployment template แล้ว แต่ยังไม่ได้ apply และยังไม่ยืนยัน runtime/คำสั่งใน Render Dashboard ชื่อ service `event-backend` ใน template ต้องเทียบกับ service เดิมก่อนนำไปเชื่อม Blueprint ตั้ง `DATABASE_PROVIDER` และ `DATABASE_URL` ผ่าน dashboard โดย `sync: false` ไม่เก็บ secret ใน repository ค่า Dockerfile/context อ้างอิงจาก `rootDir: backend` ตาม [Render monorepo documentation](https://render.com/docs/monorepo-support) หากใช้ Docker runtime ไม่ต้องนำ Build/Start Command ของ native runtime ไปตั้งทับ Dockerfile ทุกครั้งที่เริ่ม server จะ authenticate, sync และตรวจ marker ก่อน seed ไม่พบ health endpoint แยก; Compose ใช้ GET `/api/events` ตรวจ readiness
 
 ### Database และหลักฐาน persistence
 
 | ประเด็น | หลักฐานที่พบ | ข้อจำกัด |
 | --- | --- | --- |
-| เก็บข้อมูลจริง | Controller เรียก `Event.findAll/findByPk/create/update/destroy` ผ่าน Sequelize PostgreSQL | ยืนยัน implementation ไม่ใช่ผลทดสอบฐานข้อมูล Production |
-| Local persistence | `pgdata:/var/lib/postgresql/data` ใน Compose | ยังไม่ได้ทดสอบ restart ในรอบนี้ |
-| Seed persistence | `seed_runs` marker และ events commit ใน transaction เดียวกัน พร้อม advisory lock | มี 12 seed records ในซอร์ส; ยังไม่ยืนยันจำนวนปัจจุบันบน Production |
+| เก็บข้อมูลจริง | Controller เรียก `Event.findAll/findByPk/create/update/destroy` ผ่าน Sequelize PostgreSQL | CRUD ผ่านบน PostgreSQL local; ยังไม่ทดสอบ mutation บน Production |
+| Local persistence | `pgdata:/var/lib/postgresql/data` ใน Compose | ตรวจ configuration แล้ว; ทดสอบ restart ของ Backend process แล้ว แต่ยังไม่ restart PostgreSQL container |
+| Seed persistence | `seed_runs` marker และ events commit ใน transaction เดียวกัน พร้อม advisory lock | integration tests ยืนยัน 12 seed records และไม่เพิ่มซ้ำ; Production ตรวจล่าสุดมี 13 รายการ |
 | Neon support | `DATABASE_PROVIDER=neon` เลือก secure WebSocket driver | ไม่ยืนยันว่า Production ใช้ Neon |
-| Production provider | **TODO:** ยืนยันชื่อ provider และการตั้งค่า backup/retention จาก dashboard โดยไม่เปิดเผย connection string | URL ของ Render/Vercel ไม่พิสูจน์ provider หรือ persistence |
+| Production provider | **TODO:** ยืนยันชื่อ provider และการตั้งค่า backup/retention จาก dashboard โดยไม่เปิดเผย connection string | GET ผ่าน Render และ Vercel proxy ยืนยันการอ่าน แต่ยังไม่พิสูจน์ provider หรือ persistence หลัง redeploy |
 
 ฐานข้อมูล Production ต้องอยู่ใน PostgreSQL service ที่เก็บข้อมูลถาวรแยกจาก filesystem ของ Backend ใช้ `DATABASE_URL` ใน secrets/environment ของ Render และไม่บันทึก credentials ลง README การยืนยัน persistence ต้องบันทึกข้อมูลทดสอบแล้วตรวจซ้ำหลัง refresh และ restart/redeploy ตามหัวข้อถัดไป
 
 ## 13. การตรวจสอบและทดสอบ
 
-### สิ่งที่ตรวจแล้วในรอบจัดทำเอกสาร
+ผลตรวจเมื่อวันที่ 19 ตุลาคม 2569 หลังแก้ Backend filtering, DELETE response และ Frontend error handling โดยไม่แคปภาพหน้าจอตามคำขอ
 
-- อ่าน package scripts, entry point, database configuration, models, controllers, routes, seed, Frontend API client, validation, dialogs, Dockerfiles และ Compose
-- ยืนยันจากโค้ดว่ามี REST CRUD 5 endpoints และ DELETE ใช้ 204
-- ยืนยันจากโค้ดว่าการค้นหา/กรองอยู่ที่ Frontend และ seed มี 12 รายการครบ 3 หมวด ทั้งเผยแพร่และฉบับร่าง
-- ตรวจชื่อ environment และจัดทำ example ด้วย placeholder โดยไม่คัดลอกค่า secret
-- ตรวจว่าไม่มี screenshots, `vercel.json`, `render.yaml` หรือ test files ใน repository ที่ตรวจ
-- ทดลองเปิด Frontend / Events API / Swagger ด้วยเครื่องมือเว็บแล้วเข้าถึงไม่ได้ ผลนี้ยังไม่ใช่หลักฐานว่า Production ล่ม
+### ผลทดสอบที่ยืนยันแล้ว
 
-**ยังไม่ได้รัน application, build, lint, typecheck หรือทดสอบ HTTP/ฐานข้อมูลในรอบนี้** ไม่ได้ติดตั้ง packages และไม่ได้ส่ง POST, PUT หรือ DELETE ไปยัง Production
+| รายการ | ผลจริง | ขอบเขต |
+| --- | --- | --- |
+| Backend typecheck | ผ่าน `bun run typecheck` | รวม source, scripts และ tests |
+| Backend automated tests | **21 ผ่าน / 0 ไม่ผ่าน** เมื่อเปิด DB tests | configuration 7 และ integration 14 บน PostgreSQL 15 local |
+| Frontend automated tests | **11 ผ่าน / 0 ไม่ผ่าน** | validation, search/sort utilities, API client/error contract |
+| Frontend lint | ผ่าน `bun run lint` | ESLint |
+| Frontend production build | **ผ่าน `bun run build`** | TypeScript และ static pages ผ่าน; แยก Turbopack cache ที่เก็บข้อผิดพลาดจาก sandbox แล้ว build ใหม่สำเร็จ |
+| Production read checks | HTTP **200** | Frontend, Render GET events, Vercel GET events proxy, Swagger และ OpenAPI JSON |
+| Production CORS preflight | HTTP **204**, allowed origin ตรง Vercel URL | OPTIONS สำหรับ POST พร้อม Content-Type; ไม่ได้ส่ง POST จริง |
 
-### คำสั่งตรวจที่มีใน package scripts
+Backend integration tests ใช้ schema ชั่วคราวชื่อ `exam_test_<random>` สร้างและลบเฉพาะ schema ของตนเอง รับเฉพาะ PostgreSQL host แบบ localhost/loopback และ **ไม่ใช้ DATABASE_URL จาก .env โดยปริยาย** จึงไม่เขียนข้อมูล Production
+
+การทดสอบยืนยัน HTTP CRUD ทั้ง 5 routes, validation/JSON/ID ที่ไม่ถูกต้อง (400), ไม่พบข้อมูล (404), query failure ที่จำลองด้วยการเปลี่ยนชื่อตารางชั่วคราวใน test schema (500), search ชื่อ/ผู้จัดแบบไม่สนตัวพิมพ์ใหญ่เล็ก, category ร่วมกับ search, literal wildcard, CORS และ Swagger
+
+Seed tests ยืนยันการเรียกพร้อมกันไม่เพิ่มซ้ำ ได้ 12 รายการครบ 3 หมวดและทั้งสองสถานะ พร้อมเก็บ edits/deletions เมื่อ seed ซ้ำ Persistence tests อ่านผ่าน connection ใหม่และ **เริ่ม Backend process ใหม่จริงสองครั้ง** โดยข้อมูลที่แก้ไขและจำนวนรายการยังคงเดิม ไม่ได้หมายถึงทดสอบ restart PostgreSQL container หรือ Production redeploy แล้ว
+
+Frontend tests ตรวจรูปแบบข้อมูล, form errors, search/sort, query parameters, network errors, API 400/404/500 และ DELETE ทั้ง 200/legacy 204 โดยจำลอง fetch จึงไม่ใช่การทดสอบกด UI บน browser จริง
+
+### คำสั่งทดสอบที่รันซ้ำได้
+
+เริ่ม PostgreSQL จาก root:
+
+```sh
+docker compose up -d postgres
+```
 
 Backend:
 
 ```sh
 cd backend
 bun run typecheck
-bun run db:check:local
+bun test
+bun run test:integration
+```
+
+`bun test` ปกติจะรัน configuration tests และข้าม DB tests ส่วน `bun run test:integration` รัน integration 14 ข้อ ตั้งค่าเริ่มต้นเป็นบัญชี local development ของ Compose ที่ `127.0.0.1:5433/event_db` หากใช้ PostgreSQL local ของตนเอง ให้ export `TEST_DATABASE_URL` ด้วยบัญชีทดสอบก่อนรัน ห้ามใส่ connection string จริงใน Git หากต้องการรัน configuration และ integration พร้อมกัน:
+
+```sh
+RUN_DB_TESTS=1 bun test
 ```
 
 Frontend:
 
 ```sh
 cd frontend
+bun test
 bun run lint
 bun run build
 ```
 
-Backend มี script `bun test` แต่ **ไม่พบไฟล์ทดสอบ** จึงไม่ถือว่ามี test suite ที่ผ่านแล้ว `backend/README.md` เดิมกล่าวถึง `tests/event-seed.integration.test.ts` ซึ่งไม่มีใน checkout นี้ และกล่าวถึง `/api-docs` แต่ route จริงคือ `/api/events/docs` ให้ใช้ paths ตามเอกสาร root ฉบับนี้ ไม่มีการแก้ README ย่อยเพราะอยู่นอกขอบเขตไฟล์ที่อนุญาต
+### สิ่งที่ยังต้องทดสอบหรือดำเนินการ
 
-### แผนทดสอบที่ยังต้องทำ
-
-ทดสอบ mutation บนฐานข้อมูลทดสอบก่อน และบันทึกผลจริงพร้อมวันเวลา/สภาพแวดล้อม อย่านับตัวอย่างผลลัพธ์ในเอกสารเป็นผลทดสอบ
-
-| การทดสอบ | วิธีตรวจ / ผลที่คาดจากโค้ด | สถานะ |
-| --- | --- | --- |
-| Read | GET list ได้ 200 และ `{data: [...]}`; GET ID ที่มีอยู่ได้ 200 | ยังไม่ทดสอบ |
-| Create | ส่ง POST ที่ถูกต้องได้ 201; จด ID แล้วอ่านกลับได้ | ยังไม่ทดสอบ |
-| Update | PUT ส่ง required fields ครบได้ 200; GET ยืนยันข้อมูลใหม่; ทดลองละ status ให้คงค่าเดิม | ยังไม่ทดสอบ |
-| Delete | UI ยกเลิกต้องไม่ลบ; ยืนยันลบได้ 204; GET ID เดิมได้ 404 | ยังไม่ทดสอบ |
-| Search / Filter | ค้นชื่อ/ผู้จัดและกรอง 3 หมวด/สถานะใน UI ร่วมกัน; ตรวจ empty state และ reset | ยังไม่ทดสอบ |
-| API query | เปรียบเทียบ GET พร้อม search/category กับ list; ตามโค้ดยังคืนทั้งหมด | ยังไม่ทดสอบ runtime; ยังไม่มี server filtering |
-| Validation / 400 | ส่งข้อความว่าง/ยาวเกิน, หมวดผิด, วันที่ไม่มีจริง, status เป็น string, ID ผิด หรือ JSON เสีย | ยังไม่ทดสอบ |
-| Not found / 404 | ใช้ ID ที่ตรวจว่าไม่มีจริง หรือ route ที่ไม่มี | ยังไม่ทดสอบ |
-| Server error / 500 | จำลอง query failure ในสภาพแวดล้อมทดสอบหลัง server พร้อมใช้งาน แล้วตรวจ error body และ UI | ยังไม่ทดสอบ |
-| Loading / Network error | ใช้ network throttling/offline ตรวจ spinner, retry, toast และป้องกันกดซ้ำ | ยังไม่ทดสอบ |
-| Seed | เริ่มด้วยฐานข้อมูลทดสอบใหม่ได้ 12 รายการ; restart ไม่เพิ่มซ้ำ; แก้/ลบแล้วไม่ถูก seed ทับ | ยังไม่ทดสอบ |
-| Persistence | สร้าง/แก้ไขข้อมูล อ่านกลับหลัง refresh และ restart Backend; Docker down/up โดยเก็บ volume แล้วอ่านซ้ำ | ยังไม่ทดสอบ |
-| Online deployment | ตรวจ Vercel → proxy → Render → DB, Swagger, CORS และ CRUD ด้วยข้อมูลทดสอบที่ได้รับอนุญาต | ยังไม่ทดสอบสำเร็จ |
-
-ตัวอย่างคำสั่งอ่านอย่างเดียวสำหรับตรวจในเครื่องหลังเปิด Backend แล้ว:
-
-```sh
-curl -i http://localhost:4000/api/events
-curl -i http://localhost:4000/api/events/invalid
-curl -i http://localhost:4000/api-docs.json
-```
-
-คำสั่งข้างต้นเป็นขั้นตอนสำหรับผู้ตรวจ ไม่ใช่รายการคำสั่งที่รายงานว่ารันผ่านแล้ว
+| รายการ | สิ่งที่ยังขาด |
+| --- | --- |
+| Browser end-to-end | กดเพิ่ม/แก้ไข/ยืนยันลบ/ยกเลิก, ตัวกรองร่วมกัน และตรวจ spinner/retry/toast จริง; รอบนี้ไม่มีเครื่องมือ browser control ให้ใช้งาน |
+| Production deployment build | Local production build ผ่านแล้ว; ยังต้องตรวจ build log บน hosting หลัง deploy เวอร์ชันใหม่ |
+| Deployment เวอร์ชันใหม่ | ยังไม่ได้ deploy working tree นี้; Production OpenAPI ยังมี DELETE 204 และไม่มี query parameters |
+| Production CRUD | ยังไม่ส่ง POST/PUT/DELETE บน Production; ต้องใช้ข้อมูลทดสอบที่แยกชัดเจน |
+| Production persistence | ยังไม่ทดสอบหลัง restart/redeploy หรือยืนยัน provider/backup จาก dashboard |
+| Database container persistence | มี named volume แต่ยังไม่ restart PostgreSQL container เพื่อตรวจซ้ำ |
 
 ## 14. Checklist เทียบข้อกำหนดข้อสอบ
 
-`[x] ครบ` หมายถึงตรวจพบหลักฐานตามที่ระบุในโค้ด/ไฟล์ ส่วน `[ ] ยังไม่ครบ` และ `[ ] ยังไม่ยืนยัน` แยกสิ่งที่ขาดจากสิ่งที่ต้องตรวจ runtime การมี implementation ไม่ได้หมายถึงผ่าน end-to-end test
+`[x] ครบ` หมายถึงมีหลักฐานตามขอบเขตที่ระบุ `[ ] ยังไม่ครบ` หมายถึงยังขาด implementation/ไฟล์ และ `[ ] ยังไม่ยืนยัน` หมายถึงต้องตรวจเพิ่มเติม ไม่ใช้ผล local ไปแทนผล Production
 
 - [x] **ครบ:** แยก `frontend/` และ `backend/` พร้อม package scripts และ source structure
-- [ ] **ยังไม่ครบ:** React + Vite — repository ใช้ Next.js + React
-- [x] **ครบ:** Sequelize Event model มีฟิลด์หลักและชนิดตรง schema พร้อม validation/timestamps
-- [x] **ครบ:** มี GET list, GET detail, POST, PUT, DELETE ใน routes
-- [ ] **ยังไม่ครบตาม status ที่ระบุในโจทย์:** DELETE ใช้ 204 แทน 200
-- [x] **ครบในโค้ด:** UI ดูรายการ/รายละเอียด เพิ่ม แก้ไข ลบพร้อมยืนยัน
-- [x] **ครบในโค้ด Frontend:** Search และ category filtering รวมถึง status filtering
-- [ ] **ยังไม่ครบ:** Backend search/category query filtering
-- [x] **ครบในโค้ด:** Form, controller และ model validation
-- [x] **ครบในโค้ด:** Loading, pending, empty/error states, retry และ toast
-- [x] **ครบในซอร์ส seed:** อย่างน้อย 10 รายการ — มี 12 รายการ
-- [x] **ครบในซอร์ส seed:** 3 หมวด หมวดละ 4 รายการ
-- [x] **ครบในซอร์ส seed:** เผยแพร่ 6 รายการและฉบับร่าง 6 รายการ
-- [x] **ครบ:** `frontend/.env.example` และ `backend/.env.example` พร้อม ignore ไฟล์ secrets
-- [ ] **ยังไม่ครบ:** ภาพหน้าจอทั้ง 4 ไฟล์
-- [x] **ครบตามข้อมูลผู้ใช้:** มี URL deployment ของ Vercel และ Render พร้อมลิงก์ API/Swagger
-- [ ] **ยังไม่ยืนยัน:** เข้าถึง Vercel และ Render ได้จริง และ proxy/CORS ทำงานครบใน Production
-- [ ] **ยังไม่ยืนยัน:** ค่า deployment จริงใน dashboard และ Production database provider
-- [x] **ครบในโค้ด:** PostgreSQL persistence ผ่าน Sequelize; Docker มี named volume และ seed marker
-- [ ] **ยังไม่ยืนยัน:** Persistence หลัง restart/redeploy และจำนวน seed ที่มีจริงในฐานข้อมูล
-- [ ] **ยังไม่ยืนยัน:** CRUD, filtering, validation, HTTP 400/404/500 และ online tests ผ่านจริง
-- [ ] **ยังไม่ยืนยัน:** ชื่อ repository ตรงรูปแบบที่อาจารย์กำหนด — ปัจจุบันลงท้าย `_Final_4` ขณะที่ชุดโจทย์คือ D; ไม่พบเอกสารรูปแบบชื่อที่ยืนยันได้
-- [ ] **ยังไม่ครบ:** ชื่อผู้จัดทำ; ยืนยันรหัสนักศึกษาจากเจ้าของโครงงานก่อนส่ง
+- [x] **ครบตามข้อยกเว้นที่อาจารย์อนุญาต:** Frontend ใช้ Next.js + React แทน React + Vite โดยผู้จัดทำยืนยันว่าได้สอบถามอาจารย์แล้ว
+- [x] **ครบ:** Sequelize Event model มีฟิลด์/ชนิดตาม schema พร้อม validation/timestamps
+- [x] **ครบและทดสอบ local แล้ว:** RESTful endpoints ทั้ง 5 รายการ
+- [x] **ครบใน working tree:** DELETE ตอบ 200 พร้อม JSON message ตามโจทย์; Production ยังเป็น 204
+- [x] **ครบในโค้ด:** UI CRUD พร้อมรายละเอียดและยืนยันลบ
+- [ ] **ยังไม่ยืนยัน:** การกด UI CRUD แบบ end-to-end ใน browser
+- [x] **ครบและทดสอบแล้ว:** Backend search/category filtering รวมถึง query validation
+- [x] **ครบและทดสอบระดับ unit:** Frontend search/filter utilities, form validation และ API client
+- [x] **ครบและทดสอบ local แล้ว:** Controller/model validation และ HTTP 400/404/500
+- [x] **ครบในโค้ด:** Loading, pending, empty/error states, retry และ toast; ยังต้องตรวจหน้าจอจริง
+- [x] **ครบและทดสอบแล้ว:** seed อย่างน้อย 10 รายการ — มี 12 รายการ
+- [x] **ครบและทดสอบแล้ว:** 3 หมวด หมวดละ 4; เผยแพร่ 6 และฉบับร่าง 6
+- [x] **ครบ:** Frontend/Backend `.env.example` พร้อม ignore secrets
+- [ ] **เว้นตามคำขอ:** ภาพหน้าจอ 4 ไฟล์ — ยังไม่บันทึก
+- [x] **ครบ:** มี Production URL ของ Vercel/Render และ HTTP GET ตอบ 200
+- [x] **ครบสำหรับการอ่าน:** GET ผ่าน Vercel proxy และ Render API ได้จริง; local CORS test และ Production OPTIONS preflight ผ่าน
+- [x] **ครบเป็น configuration template:** `frontend/vercel.json` และ `render.yaml` ไม่มี secret
+- [ ] **ยังไม่ยืนยัน:** ค่า dashboard และ database provider ของ Production; CORS preflight ตรวจผ่านแล้ว
+- [ ] **ยังไม่ครบ:** deploy การแก้ไขรอบนี้ขึ้น Vercel/Render และตรวจเวอร์ชันใหม่
+- [x] **ครบและทดสอบ local แล้ว:** ข้อมูล PostgreSQL และ seed marker คงอยู่หลังเริ่ม Backend process ใหม่จริงสองครั้ง
+- [ ] **ยังไม่ยืนยัน:** Persistence หลัง Production redeploy และ restart PostgreSQL container
+- [x] **ครบและทดสอบแล้ว:** Frontend production build รวม TypeScript/static generation ผ่าน
+- [ ] **ยังไม่ยืนยัน:** ชื่อ repository ตรงรูปแบบที่อาจารย์กำหนด — ปัจจุบันลงท้าย `_Final_4` แต่ชุดโจทย์คือ D; ไม่พบเอกสารรูปแบบชื่อที่ชัดเจน
+- [ ] **ยังไม่ครบ:** ชื่อผู้จัดทำและการยืนยันรหัสนักศึกษาจากเจ้าของโครงงาน
 
-### ข้อมูลที่ต้องเติมก่อนส่ง
+### สิ่งที่ต้องเติมหรือยืนยันก่อนส่ง
 
-1. ชื่อผู้จัดทำและการยืนยันรหัสนักศึกษา/รูปแบบชื่อ repository
-2. ภาพหน้าจอจริงทั้ง 4 ไฟล์ตามหัวข้อ 11
-3. หลักฐานเข้าถึง URL Production และการทดสอบ UI/API โดยไม่เปิดเผย secrets
-4. Database provider ที่ใช้จริง พร้อมหลักฐาน persistence หลัง restart/redeploy
-5. ค่าตั้ง Vercel/Render dashboard และบันทึกผลทดสอบตามหัวข้อ 13
+1. ชื่อผู้จัดทำ รหัสนักศึกษา และรูปแบบชื่อ repository ที่อาจารย์กำหนด
+2. Deploy โค้ดล่าสุด โดยตรวจ build log/configuration บน Vercel/Render และ provider ของฐานข้อมูล
+3. Browser end-to-end และ Production mutation/persistence tests ที่ยังไม่ได้ทำ
+4. ภาพหน้าจอทั้ง 4 รายการเว้นไว้ตามคำขอ ไม่สร้างภาพสมมติ
 
-URL Production หลักได้รับจากผู้ใช้ครบแล้ว จึงไม่มีการสร้าง URL สมมติ งานรอบนี้ปรับเฉพาะเอกสาร ไฟล์ environment examples และข้อยกเว้น `.gitignore` ที่จำเป็น โดยไม่แก้ business logic
+การแก้ไขรอบนี้เพิ่มการค้นหา/กรองที่ Backend, DELETE 200, error handling ที่ตรงกัน, validation ปี `0000`, automated tests และ deployment templates โดยไม่มีการติดตั้ง package เพิ่ม ไม่มีการแคปภาพ และไม่ได้แก้ข้อมูล Production

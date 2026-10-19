@@ -42,14 +42,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    const message =
-      body &&
-      typeof body === "object" &&
-      "message" in body &&
-      typeof body.message === "string"
-        ? body.message
-        : `ดำเนินการไม่สำเร็จ (${response.status}) กรุณาลองอีกครั้ง`;
-    throw new ApiError(message, response.status);
+    let message: string | undefined;
+    if (body && typeof body === "object") {
+      if ("error" in body && typeof body.error === "string") {
+        message = body.error;
+      } else if ("message" in body && typeof body.message === "string") {
+        message = body.message;
+      }
+    }
+    throw new ApiError(
+      message ?? `ดำเนินการไม่สำเร็จ (${response.status}) กรุณาลองอีกครั้ง`,
+      response.status,
+    );
   }
 
   if (response.status === 204) return undefined as T;
@@ -71,8 +75,7 @@ export const eventApi = {
     if (!Array.isArray(result.data) || !result.data.every(isEvent)) {
       throw new ApiError("รูปแบบข้อมูลกิจกรรมจากเซิร์ฟเวอร์ไม่ถูกต้อง");
     }
-    // The current backend ignores query parameters; keep this compatibility
-    // filter until server-side filtering is available. Always send both filters.
+    // Keep client filtering for compatibility with earlier deployed API versions.
     return filterEvents(result.data, filters.search ?? "").filter(
       (event) => !filters.category || event.category === filters.category,
     );
