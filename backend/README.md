@@ -6,6 +6,10 @@ For environment files, use `bun run dev:local` with `.env.local` or `bun run dev
 
 Startup connects to PostgreSQL and creates missing model tables with `sequelize.sync()`; it does not alter existing tables.
 
+Startup also saves 12 sample events in PostgreSQL (4 each in อบรม, สัมมนา, and จิตอาสา; each category has 2 published and 2 drafts). These are persisted records served by the API and editable through normal CRUD operations. To seed without starting the server, run `bun run db:seed:local` or `bun run db:seed:neon`.
+
+The `seed_runs` table records `initial-events-v1` in the same transaction as the events. A PostgreSQL transaction advisory lock prevents concurrent seeds from duplicating data. Restarts skip an already completed seed, preserving edits and deletions. A failed seed rolls back both the records and marker so the next startup can retry. Existing events are retained when the seed first runs.
+
 | Method | Path | Behavior |
 | --- | --- | --- |
 | GET | `/api/events` | List events ordered by event date |
@@ -32,6 +36,8 @@ POST and PUT accept JSON:
 Responses wrap event data in `{ "data": ... }`. Invalid input or IDs return 400, missing events return 404, and unexpected failures return 500.
 
 Run `bun run typecheck` and `bun test` to verify types and database configuration. Configuration tests do not require PostgreSQL.
+
+Run `RUN_DB_TESTS=1 bun --env-file=.env.local test tests/event-seed.integration.test.ts` to verify seeding against PostgreSQL. This test creates and removes a temporary schema and checks concurrent seeds, repeat runs, existing records, and preservation of edited/deleted records.
 
 Check connectivity without changing tables with `bun run db:check:local` or `bun run db:check:neon`. Use `bun run db:check` when environment variables are already exported.
 

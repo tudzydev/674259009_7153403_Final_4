@@ -24,6 +24,8 @@
     "db:check:neon": "bun --env-file=.env.neon scripts/check-db.ts",
     "typecheck": "tsc --noEmit",
     "db:check": "bun scripts/check-db.ts",
+    "db:seed:local": "bun --env-file=.env.local scripts/seed.ts",
+    "db:seed:neon": "bun --env-file=.env.neon scripts/seed.ts",
     "test": "bun test"
   },
   "dependencies": {
