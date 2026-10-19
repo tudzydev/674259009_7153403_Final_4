@@ -1,4 +1,44 @@
 services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_PROVIDER: local
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/event_db
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:4000/api/events'); process.exit(r.ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_API_URL: http://backend:4000
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
   postgres:
     image: postgres:15-alpine
     restart: unless-stopped
@@ -11,7 +51,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d crud_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d event_db"]
       interval: 5s
       timeout: 3s
       retries: 5
