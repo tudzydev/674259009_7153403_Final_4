@@ -1,0 +1,37 @@
+{
+  "name": "backend",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "^1.4.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "5",
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1"
+  },
+  "peerDependencies": {
+    "typescript": "5"
+  },
+  "scripts": {
+    "dev": "bun run dev:local",
+    "dev:local": "bun --env-file=.env.local --watch src/server.ts",
+    "dev:neon": "bun --env-file=.env.neon --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "start:local": "bun --env-file=.env.local src/server.ts",
+    "start:neon": "bun --env-file=.env.neon src/server.ts",
+    "db:check:local": "bun --env-file=.env.local scripts/check-db.ts",
+    "db:check:neon": "bun --env-file=.env.neon scripts/check-db.ts",
+    "typecheck": "tsc --noEmit",
+    "db:check": "bun scripts/check-db.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "cors": "^2.8.6",
+    "express": "5",
+    "pg": "^8.23.1",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "6"
+  }
+}
